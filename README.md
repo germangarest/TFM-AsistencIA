@@ -40,3 +40,20 @@ La aplicación web se desarrollará utilizando **Streamlit** y contará con tres
    - Subida de enlaces o videos para generar resúmenes y cuestionarios.
 3. **Chatbot Asistencial:**  
    - Asistente conversacional que ofrece recomendaciones y guía en situaciones de emergencia.
+
+
+## Ejemplo de uso con Agentes (con n8n):
+### Detección y gestión de un accidente de coche:
+
+1. **Captura del evento en tiempo real:**
+   - Una cámara de la vía pública graba un accidente de coche.
+   - Un agente en n8n recibe el video mediante un webhook y lo envía a un servicio de análisis que evalúa la probabilidad de emergencia.
+
+2. **Evaluación y confirmación:**
+   - Si el análisis detecta una probabilidad alta (por ejemplo, >70%), se considera que se ha producido una emergencia.
+   - Se activa una alerta automática que notifica a servicios de emergencia (ambulancias, policía, etc.) mediante correo, SMS o sistemas centralizados.
+
+3. **Registro y seguimiento:**
+   - El evento se almacena en una base de datos para un control histórico y análisis posterior.
+   - La aplicación web (Streamlit) recibe la notificación y muestra la información en tiempo real a los encargados y a la comunidad, incluyendo la ubicación y detalles del accidente.
+
