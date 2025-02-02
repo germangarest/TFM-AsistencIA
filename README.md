@@ -2,7 +2,7 @@
 
 _AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la detección temprana de tres tipos de emergencias mediante análisis de video: accidentes de coche, incendios y peleas. La idea principal es utilizar cámaras de la vía pública para alertar de forma inmediata a servicios de emergencia (bomberos, ambulancias y policía) y, a la vez, ofrecer herramientas de capacitación ciudadana y asistencia en tiempo real.
 
-![AsistencIA](img/logo.png){ width=300px }
+![AsistencIA](img/logo.png){width=300px}
 
 ## Justificación y descripción del proyecto
 
