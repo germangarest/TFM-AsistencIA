@@ -1,0 +1,47 @@
+REPORTE DE EVALUACI�N DEL MODELO DE DETECCI�N DE PELEAS
+==================================================
+
+1. M�TRICAS PRINCIPALES
+--------------------
+Accuracy: 0.9244
+ROC AUC: 0.9927
+PR AUC: 0.9914
+
+2. M�TRICAS POR CLASE
+--------------------
+
+Clase: Normal
+Precision: 0.8737
+Recall: 0.9931
+F1-score: 0.9296
+
+Clase: Pelea
+Precision: 0.9919
+Recall: 0.8549
+F1-score: 0.9183
+
+3. MATRIZ DE CONFUSI�N
+--------------------
+Filas: Verdadero, Columnas: Predicho
+[[26021   181]
+ [ 3761 22154]]
+
+
+- Análisis por Clase
+* Clase Normal:
+Precision: 87.37%
+Recall: 99.31%
+F1-score: 92.96%
+Muy buen recall, significa que casi no se pierden casos normales
+
+* Clase Pelea:
+Precision: 99.19%
+Recall: 85.49%
+F1-score: 91.83%
+Excelente precisión, cuando el modelo predice "pelea" casi siempre acierta
+
+- Conclusiones: 
+El modelo tiene un rendimiento muy bueno en general, con métricas superiores al 90% en la mayoría de los casos.
+Es especialmente bueno evitando falsos positivos (solo 181 casos de 26,202 normales).
+El área principal de mejora sería reducir los falsos negativos (3,761 peleas no detectadas).
+Los resultados se han guardado en el directorio evaluation_results_20250204_003506 para referencia futura.
