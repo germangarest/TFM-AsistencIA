@@ -1,0 +1,9 @@
+==================================================
+REPORTE DE EVALUACI�N DEL MODELO DE DETECCI�N DE ACCIDENTES
+==================================================
+
+1. M�TRICAS PRINCIPALES
+--------------------
+Accuracy: 0.9382
+ROC AUC: 0.9794
+PR AUC: 0.9876
