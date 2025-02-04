@@ -1,5 +1,8 @@
 # AsistencIA
 
+* data (modelo de peleas y accidentes de coche): https://drive.google.com/drive/folders/17B-VwveDxqi3yTAORRlwEvTp96-YSO4s?usp=sharing
+* modelos: https://drive.google.com/drive/folders/1gOx2LQRSvPosBatWlzqP7ncQUejXaGAI?usp=sharing
+
 _AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la detección temprana de tres tipos de emergencias mediante análisis de video: accidentes de coche, incendios y peleas. La idea principal es utilizar cámaras de la vía pública para alertar de forma inmediata a servicios de emergencia (bomberos, ambulancias y policía) y, a la vez, ofrecer herramientas de capacitación ciudadana y asistencia en tiempo real.
 
 <img src="img/logo.png" alt="AsistencIA" width="400"/>
