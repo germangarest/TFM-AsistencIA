@@ -35,7 +35,13 @@ En cuanto al tema de los datos, hubo bastantes problemas con los modelos de acci
 
 Una vez más, el modelo no respondía bien, aunque esta vez directamente daba una precisión bajísima, por lo que el dataset era inútil. Finalmente, nos dimos cuenta de que el problema era que los videos de peleas (o accidentes) eran de varios minutos en los que no solo se mostraba el incidente, sino que el incidente duraba 5 o 10 segundos y el resto era una situación normal, por lo que el modelo no sabía diferenciar qué era una situación anómala.
 
-Después de todos estos problemas, finalmente, nos dimos cuenta de que la mejor manera para entrenar un modelo de estas características era coger clips cortos donde solo se muestre el incidente, y que el modelo aprenda las características y parámetros para la predicción. Para el modelo de accidentes de coche usamos el [CarCrashDataset en Github](https://github.com/Cogito2012/CarCrashDataset), y para el modelo de peleas el [RWF-2000 de Hugging Face](https://huggingface.co/datasets/DanJoshua/RWF-2000).
+Después de todos estos problemas, finalmente, nos dimos cuenta de que la mejor manera para entrenar un modelo de estas características era coger clips cortos donde solo se muestre el incidente, y que el modelo aprenda las características y parámetros para la predicción.
+
+#### DATASET USADO ACCIDENTES DE COCHE:
+Finalmente, para el modelo de accidentes de coche usamos el [CarCrashDataset en Github](https://github.com/Cogito2012/CarCrashDataset). Estos clips han sido obtenidos de grabaciones de cámaras en el salpicadero de coches (dashcam). El dataset incluye diferentes situaciones medioambientales para una mejor variabilidad.
+
+#### DATASET USADO PELEAS:
+Para el modelo de peleas, usamos el [RWF-2000 de Hugging Face](https://huggingface.co/datasets/DanJoshua/RWF-2000). Estos videos han sido sacados de cámaras de vigilancia.
 
 ### INCENDIOS:
 
@@ -44,14 +50,46 @@ Después de todos estos problemas, finalmente, nos dimos cuenta de que la mejor 
 ## 3. Descripción de los datos
 Se debe dar una descripción completa de los datos indicando qué significa cada uno de los atributos.
 
-### ACCIDENTES DE COCHE Y PELEAS:
+### ACCIDENTES DE COCHE:
+El dataset se divide en dos carpetas:
+* **Normal_Videos_for_Event_Recognition**: videos sin accidentes de coche.
+* **CrashAccidents**: videos de accidentes de coche.
+
+Atributos de los videos (metadatos):
+* **Resolución (ancho y alto)**: 1280×720 px  
+* **Frames por segundo (fps)**: 10 fps  
+* **Número de frames**: 50 frames  
+* **Duración**: 5 segundos  
+* **Tamaño del archivo**: varía de 0.5 MB a 8 MB  
+* **Formato de video**: .mp4  
+
+### PELEAS:
+El dataset se divide en dos carpetas:
+* **NonFight**: videos sin peleas.
+* **Fight**: videos de peleas.
+
+Atributos de los videos (metadatos):
+* **Resolución (ancho y alto)**: 640×360 px  
+* **Frames por segundo (fps)**:  
+* **Número de frames**:  
+* **Duración**: de 5 a 10 segundos  
+* **Tamaño del archivo**:  
+* **Formato de video**: .avi  
 
 ### INCENDIOS:
 
 ---
 
 ## 4. Exploración y visualización de los datos
-### ACCIDENTES DE COCHE Y PELEAS:
+### ACCIDENTES DE COCHE:
+Algunos ejemplos de videos de accidentes:
+
+Algunos ejemplos de situaciones normales:
+
+### PELEAS:
+Algunos ejemplos de videos de peleas:
+
+Algunos ejemplos de situaciones normales:
 
 ### INCENDIOS:
 
