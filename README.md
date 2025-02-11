@@ -1,17 +1,25 @@
-# AsistencIA
+# 🏷️ Índice
+1. [🔎 Justificación y descripción del proyecto](#1-justificación-y-descripción-del-proyecto)  
+2. [🗂️ Obtención de datos](#2-obtención-de-datos)  
+3. [📊 Descripción de los datos](#3-descripción-de-los-datos)  
+4. [📈 Exploración y visualización de los datos](#4-exploración-y-visualización-de-los-datos)  
+5. [🔧 Preparación de los datos para los algoritmos de Machine Learning](#5-preparación-de-los-datos-para-los-algoritmos-de-machine-learning)  
+6. [🏋️ Entrenamiento del modelo y comprobación del rendimiento](#6-entrenamiento-del-modelo-y-comprobación-del-rendimiento)  
+7. [🗣️ Se tiene que incluir alguna de las técnicas estudiadas en el tema de Procesamiento de Lenguaje Natural](#7-se-tiene-que-incluir-alguna-de-las-técnicas-estudiadas-en-el-tema-de-procesamiento-de-lenguaje-natural)  
+8. [🌐 Aplicación web](#8-aplicación-web)  
+9. [💡 Conclusiones](#9-conclusiones)
 
-* Data (peleas y accidentes de coche): https://drive.google.com/drive/folders/1Sv2EEz_XB-pQThg6wpxQLe9wCy7Qbn7C?usp=sharing
+---
 
+## 1. Justificación y descripción del proyecto
 _AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la detección temprana de tres tipos de emergencias mediante análisis de video: accidentes de coche, incendios y peleas. La idea principal es utilizar cámaras de la vía pública para alertar de forma inmediata a servicios de emergencia (bomberos, ambulancias y policía) y, a la vez, ofrecer herramientas de capacitación ciudadana y asistencia en tiempo real.
 
 <img src="img/logo.png" alt="AsistencIA" width="400"/>
 
-## Justificación y descripción del proyecto
-
 El proyecto _AsistencIA_ tiene como objetivo desarrollar un sistema integral que detecte, mediante análisis de video, situaciones críticas en tiempo real. Las principales emergencias a detectar son:
 
-- **Accidentes de coche**
-- **Incendios**
+- **Accidentes de coche**  
+- **Incendios**  
 Para la deteccion de incendios/fuegos, hemos usado un modelo de deep learning que implementa una CNN (Red Neuronal Convolucional) para captar fuego en imágenes, con un rendimiento del 95% de precisión. El modelo se entrena con un dataset obtenido de Kaggle con unas 2.000 imágenes, con una distribución al 50% de fuego/no fuego. Algunos aspectos claves del modelo son:
 
 ### Dataset y preprocesamiento:
@@ -43,21 +51,93 @@ Además, se incorporan funcionalidades adicionales para mejorar la respuesta y f
 - **Módulo de Capacitación:** Permite subir enlaces a videos (por ejemplo, de YouTube) relacionados con primeros auxilios, para los cuales se genera un resumen y un cuestionario interactivo, facilitando el aprendizaje y la capacitación.
 - **Chatbot Asistencial:** Un asistente conversacional que responde preguntas sobre cómo actuar en situaciones de emergencia, ofreciendo instrucciones claras y, de ser necesario, generando imágenes ilustrativas para reforzar la explicación.
 
-## Funcionalidades
+---
 
-1. **Detección en tiempo real:**
-   - *Webcam:* Permite probar el sistema en vivo a través de la cámara web.
-   - *Carga de Video:* Permite subir archivos de video y obtener una predicción en tiempo real de la probabilidad de que se esté produciendo alguno de los eventos críticos.
+## 2. Obtención de datos
+## ACCIDENTES DE COCHE Y PELEAS:
+En cuanto al tema de los datos, hubo bastantes problemas con los modelos de accidentes de coche y peleas. Primero, comenzamos probando un dataset de imágenes, las cuales habían sido extraídas de los videos respectivos, el cual era de [Kaggle](https://www.kaggle.com/datasets/odins0n/ucf-crime-dataset). Este dataset contenía datos de muchas situaciones anómalas, entre ellas se incluían "RoadAccidents" y "Fighting", lo que buscábamos. Entrenamos el modelo y daba una alta precisión, pero al probarlo en la aplicación web de Streamlit con otros videos, daba precisiones del 100% en cualquier parte del video, incluso si no se veía un accidente ni una pelea, por lo que después de muchos intentos de optimizaciones, pasamos a entrenar el modelo con el mismo dataset pero directamente con los videos, el cual estaba en la página oficial [University of Central Florida](https://www.crcv.ucf.edu/projects/real-world/).
 
-2. **Capacitación ciudadana:**
-   - *Resumen y Cuestionario:* Al subir un enlace a un video de YouTube o un video local relacionado con primeros auxilios, el sistema genera un resumen del contenido y un cuestionario interactivo para reforzar el aprendizaje.
+Una vez más, el modelo no respondía bien, aunque esta vez directamente daba una precisión bajísima, por lo que el dataset era inútil. Finalmente, nos dimos cuenta de que el problema era que los videos de peleas (o accidentes) eran de varios minutos en los que no solo se mostraba el incidente, sino que el incidente duraba 5 o 10 segundos y el resto era una situación normal, por lo que el modelo no sabía diferenciar qué era una situación anómala.
 
-3. **Asistencia mediante chatbot:**
-   - El chatbot responde a consultas relacionadas con protocolos de actuación en caso de emergencias (accidentes, incendios, peleas), ofreciendo directrices claras y generando imágenes de ejemplo para ilustrar las instrucciones.
+Después de todos estos problemas, finalmente, nos dimos cuenta de que la mejor manera para entrenar un modelo de estas características era coger clips cortos donde solo se muestre el incidente, y que el modelo aprenda las características y parámetros para la predicción.
 
+### DATASET USADO ACCIDENTES DE COCHE:
+Finalmente, para el modelo de accidentes de coche usamos el [CarCrashDataset en Github](https://github.com/Cogito2012/CarCrashDataset). Estos clips han sido obtenidos de grabaciones de cámaras en el salpicadero de coches (dashcam). El dataset incluye diferentes situaciones medioambientales para una mejor variabilidad.
 
-## Aplicación web
+### DATASET USADO PELEAS:
+Para el modelo de peleas, usamos el [RWF-2000 de Hugging Face](https://huggingface.co/datasets/DanJoshua/RWF-2000). Estos videos han sido sacados de cámaras de vigilancia.
 
+## INCENDIOS:
+
+---
+
+## 3. Descripción de los datos
+Se debe dar una descripción completa de los datos indicando qué significa cada uno de los atributos.
+
+### ACCIDENTES DE COCHE:
+El dataset se divide en dos carpetas:
+* **Normal_Videos_for_Event_Recognition**: videos sin accidentes de coche.
+* **CrashAccidents**: videos de accidentes de coche.
+
+Atributos de los videos (metadatos):
+* **Resolución (ancho y alto)**: 1280×720 px  
+* **Frames por segundo (fps)**: 10 fps  
+* **Número de frames**: 50 frames  
+* **Duración**: 5 segundos  
+* **Tamaño del archivo**: varía de 0.5 MB a 8 MB  
+* **Formato de video**: .mp4  
+
+### PELEAS:
+El dataset se divide en dos carpetas:
+* **NonFight**: videos sin peleas.
+* **Fight**: videos de peleas.
+
+Atributos de los videos (metadatos):
+* **Resolución (ancho y alto)**: 640×360 px  
+* **Frames por segundo (fps)**:  
+* **Número de frames**:  
+* **Duración**: de 5 a 10 segundos  
+* **Tamaño del archivo**:  
+* **Formato de video**: .avi  
+
+### INCENDIOS:
+
+---
+
+## 4. Exploración y visualización de los datos
+### ACCIDENTES DE COCHE:
+Algunos ejemplos de videos de accidentes:
+
+Algunos ejemplos de situaciones normales:
+
+### PELEAS:
+Algunos ejemplos de videos de peleas:
+
+Algunos ejemplos de situaciones normales:
+
+### INCENDIOS:
+
+---
+
+## 5. Preparación de los datos para los algoritmos de Machine Learning
+### ACCIDENTES DE COCHE Y PELEAS:
+
+### INCENDIOS:
+
+---
+
+## 6. Entrenamiento del modelo y comprobación del rendimiento
+### ACCIDENTES DE COCHE Y PELEAS:
+
+### INCENDIOS:
+
+---
+
+## 7. Se tiene que incluir alguna de las técnicas estudiadas en el tema de Procesamiento de Lenguaje Natural
+
+---
+
+## 8. Aplicación web
 La aplicación web se desarrollará utilizando **Streamlit** y contará con tres módulos principales:
 
 1. **Detección en Tiempo Real:**  
@@ -66,20 +146,6 @@ La aplicación web se desarrollará utilizando **Streamlit** y contará con tres
    - Subida de enlaces o videos para generar resúmenes y cuestionarios.
 3. **Chatbot Asistencial:**  
    - Asistente conversacional que ofrece recomendaciones y guía en situaciones de emergencia.
+---
 
-
-## Ejemplo de uso con Agentes (con n8n):
-### Detección y gestión de un accidente de coche:
-
-1. **Captura del evento en tiempo real:**
-   - Una cámara de la vía pública graba un accidente de coche.
-   - Un agente en n8n recibe el video mediante un webhook y lo envía a un servicio de análisis que evalúa la probabilidad de emergencia.
-
-2. **Evaluación y confirmación:**
-   - Si el análisis detecta una probabilidad alta (por ejemplo, >70%), se considera que se ha producido una emergencia.
-   - Se activa una alerta automática que notifica a servicios de emergencia (ambulancias, policía, etc.) mediante correo, SMS o sistemas centralizados.
-
-3. **Registro y seguimiento:**
-   - El evento se almacena en una base de datos para un control histórico y análisis posterior.
-   - La aplicación web (Streamlit) recibe la notificación y muestra la información en tiempo real a los encargados y a la comunidad, incluyendo la ubicación y detalles del accidente.
-
+## 9. Conclusiones
