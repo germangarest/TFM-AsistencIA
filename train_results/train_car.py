@@ -1,217 +1,386 @@
+import os
+# Forzamos a TensorFlow a no usar ninguna GPU:
+os.environ['CUDA_VISIBLE_DEVICES'] = '-1'
+
+import re
+import numpy as np
+import cv2  # Asegúrate de tener instalado opencv-python (pip install opencv-python)
 import tensorflow as tf
 import tensorflow.keras.backend as K
-from tensorflow.keras.preprocessing.image import ImageDataGenerator
-from tensorflow.keras.applications import MobileNetV2
-from tensorflow.keras.layers import Dense, GlobalAveragePooling2D, Dropout
-from tensorflow.keras.models import Model
-from tensorflow.keras.callbacks import ModelCheckpoint, EarlyStopping, ReduceLROnPlateau
-import numpy as np
-import os
-from datetime import datetime
-from sklearn.metrics import classification_report, roc_curve, auc, precision_recall_curve, confusion_matrix
 import matplotlib.pyplot as plt
 import seaborn as sns
+from datetime import datetime
+from sklearn.metrics import classification_report, roc_curve, auc, precision_recall_curve, confusion_matrix
 
-# Configuración optimizada
+# Usaremos MobileNetV2, más ligero para CPU
+from tensorflow.keras.applications import MobileNetV2
+from tensorflow.keras.applications.mobilenet_v2 import preprocess_input
+from tensorflow.keras.layers import (Dense, GlobalAveragePooling2D, Dropout, Input,
+                                     TimeDistributed, LSTM)
+from tensorflow.keras.regularizers import L1L2
+from tensorflow.keras.models import Model
+from tensorflow.keras.callbacks import (ModelCheckpoint, EarlyStopping, ReduceLROnPlateau,
+                                        LearningRateScheduler)
+
+# ==================== CALLBACK PARA TIEMPO RESTANTE ====================
+import time
+
+def format_time(seconds):
+    """Formatea segundos a HH:MM:SS."""
+    m, s = divmod(int(seconds), 60)
+    h, m = divmod(m, 60)
+    return f"{h:02d}:{m:02d}:{s:02d}"
+
+class TimeRemainingCallback(tf.keras.callbacks.Callback):
+    def on_train_begin(self, logs=None):
+        self.train_start_time = time.time()
+        self.total_epochs = self.params.get('epochs', 1)
+
+    def on_epoch_begin(self, epoch, logs=None):
+        self.epoch_start_time = time.time()
+        self.steps = self.params.get('steps', None)
+        self.batch_times = []
+        self.last_batch_time = time.time()
+        self.current_epoch = epoch
+
+    def on_train_batch_end(self, batch, logs=None):
+        current_time = time.time()
+        batch_time = current_time - self.last_batch_time
+        self.batch_times.append(batch_time)
+        self.last_batch_time = current_time
+
+        if self.steps and ((batch + 1) % 5 == 0 or batch == 0):
+            avg_batch_time = np.mean(self.batch_times)
+            batches_left = self.steps - (batch + 1)
+            epoch_remaining = batches_left * avg_batch_time
+
+            total_epochs_remaining = self.total_epochs - (self.current_epoch + 1)
+            total_remaining = epoch_remaining + total_epochs_remaining * ((batch + 1) * avg_batch_time)
+
+            print(f"[Época {self.current_epoch+1}] Batch {batch+1}/{self.steps} | "
+                  f"Tiempo restante en la época: {format_time(epoch_remaining)} | "
+                  f"Tiempo total restante estimado: {format_time(total_remaining)}")
+
+    def on_epoch_end(self, epoch, logs=None):
+        epoch_duration = time.time() - self.epoch_start_time
+        print(f"Época {epoch+1} completada en {format_time(epoch_duration)}")
+
+    def on_train_end(self, logs=None):
+        total_duration = time.time() - self.train_start_time
+        print(f"Entrenamiento completado en {format_time(total_duration)}")
+
+# ==================== CONFIGURACIÓN ====================
 class Config:
-    # Parámetros del modelo
-    IMG_SIZE = 160  # Aumentado para capturar más detalles
-    BATCH_SIZE = 16  # Reducido para mejor generalización
-    EPOCHS = 50     # Aumentado para permitir mejor convergencia
-    INITIAL_LR = 5e-4  # Learning rate más bajo para mayor precisión
-    MIN_LR = 1e-6
-    VALIDATION_SPLIT = 0.2
-    
-    # Parámetros de entrenamiento
-    USE_MIXED_PRECISION = True
-    USE_CLASS_WEIGHTS = True
-    UNFREEZE_LAYERS = 50  # Aumentado para fine-tuning más profundo
-    
-    # Parámetros de aumento de datos (ajustados para mantener características importantes)
-    ROTATION_RANGE = 10  # Reducido para mantener orientación
-    SHIFT_RANGE = 0.1
-    ZOOM_RANGE = 0.15
-    BRIGHTNESS_RANGE = [0.85, 1.15]  # Aumentado rango para robustez
-    
+    # Parámetros del modelo y entrenamiento (ajustados para CPU)
+    IMG_SIZE = 160              # Resolución: 160x160 (menor que 224 para acelerar)
+    BATCH_SIZE = 2              # Tamaño del lote reducido
+    EPOCHS = 20                 # Menor número de épocas
+    INITIAL_LR = 2e-4           # Learning rate inicial
+    MIN_LR = 1e-6               # Learning rate mínimo
+    VALIDATION_SPLIT = 0.2      # Fracción para validación
+    PRECISION_THRESHOLD = 0.6   # Umbral para clasificación
+    USE_MIXED_PRECISION = False # Precisión mixta desactivada
+    USE_CLASS_WEIGHTS = True    # Usar pesos de clases para balancear
+    UNFREEZE_LAYERS = 0         # Para MobileNetV2, congelamos todo el modelo base
+
+    # Parámetros de Data Augmentation
+    ROTATION_RANGE = 10         
+    SHIFT_RANGE = 0.1           
+    ZOOM_RANGE = 0.15           
+    BRIGHTNESS_RANGE = [0.85, 1.15]
+
+    # Parámetros para secuencias de video
+    SEQUENCE_LENGTH = 5         # Número de frames por secuencia reducido
+    FRAME_STRIDE = 2            # Stride
+
     @classmethod
     def setup(cls):
-        # Optimizaciones de memoria y CPU/GPU
-        physical_devices = tf.config.list_physical_devices('GPU')
-        if physical_devices:
-            try:
-                for device in physical_devices:
-                    tf.config.experimental.set_memory_growth(device, True)
-                if cls.USE_MIXED_PRECISION:
-                    policy = tf.keras.mixed_precision.Policy('mixed_float16')
-                    tf.keras.mixed_precision.set_global_policy(policy)
-                    print("\nMixed precision activada")
-            except Exception as e:
-                print(f"Error configurando GPU: {str(e)}")
-        else:
-            print("\nNo se detectó GPU, usando CPU")
-            
-        # Optimizaciones de rendimiento
-        try:
-            tf.config.optimizer.set_jit(True)  # XLA
-            print("XLA optimización activada")
-        except:
-            print("XLA optimización no disponible")
-        
-        # Optimizar threads para CPU
+        print("\nForzando uso de CPU (no se detectarán GPUs).")
+        tf.config.set_soft_device_placement(True)
         try:
             tf.config.threading.set_inter_op_parallelism_threads(4)
             tf.config.threading.set_intra_op_parallelism_threads(4)
-            print("Optimización de threads configurada")
-        except:
-            print("No se pudo configurar optimización de threads")
+            print("Optimización de threads configurada para CPU.")
+        except Exception as e:
+            print(f"No se pudo configurar optimización de threads: {e}")
 
-def create_model(input_shape=(Config.IMG_SIZE, Config.IMG_SIZE, 3), training=True):
-    """Modelo optimizado para máxima precisión"""
-    base_model = MobileNetV2(
-        weights='imagenet',
-        include_top=False,
-        input_shape=input_shape,
-        alpha=1.0  # Usando modelo completo para mayor capacidad
-    )
-    
-    # Fine-tuning más profundo
-    base_model.trainable = True
-    for layer in base_model.layers[:-Config.UNFREEZE_LAYERS]:
-        layer.trainable = False
-    
-    x = base_model.output
-    x = GlobalAveragePooling2D()(x)
-    x = Dense(512, activation='relu')(x)  # Capa más grande
-    x = Dropout(0.6)(x)  # Más dropout para evitar overfitting
-    x = Dense(256, activation='relu')(x)  # Capa adicional
-    x = Dropout(0.5)(x)
-    outputs = Dense(1, activation='sigmoid')(x)
-    
-    model = Model(inputs=base_model.input, outputs=outputs, name='accident_detector')
-    
-    if training:
-        optimizer = tf.keras.optimizers.Adam(
-            learning_rate=Config.INITIAL_LR,
-            beta_1=0.9,
-            beta_2=0.999,
-            epsilon=1e-08
-        )
-        if Config.USE_MIXED_PRECISION:
-            optimizer = tf.keras.mixed_precision.LossScaleOptimizer(optimizer)
-        
-        model.compile(
-            optimizer=optimizer,
-            loss='binary_crossentropy',
-            metrics=['accuracy',
-                    tf.keras.metrics.Precision(name='precision'),
-                    tf.keras.metrics.Recall(name='recall'),
-                    tf.keras.metrics.AUC(name='auc')]
-        )
-    
-    return model
+# ==================== FUNCIÓN PARA EXTRAER SECUENCIAS DE VIDEO ====================
+def read_video_sequence(video_path, start_frame, sequence_length, target_size):
+    """
+    Lee una secuencia de frames desde un video a partir de 'start_frame'.  
+    Si no se logran leer suficientes frames, se repite el último frame.  
+    Se aplica el preprocesamiento propio de MobileNetV2.
+    """
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        raise ValueError(f"No se pudo abrir el video: {video_path}")
+    frames = []
+    cap.set(cv2.CAP_PROP_POS_FRAMES, start_frame)
+    for _ in range(sequence_length):
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+        frame = cv2.resize(frame, (target_size[0], target_size[1]))
+        frame = preprocess_input(frame)
+        frames.append(frame)
+    cap.release()
+    if len(frames) == 0:
+        raise ValueError(f"No se pudo leer ningún frame del video: {video_path}")
+    while len(frames) < sequence_length:
+        frames.append(frames[-1])
+    return np.array(frames)  # (SEQUENCE_LENGTH, height, width, 3)
 
-def create_data_generators():
-    """Generadores de datos optimizados para precisión"""
-    train_datagen = ImageDataGenerator(
-        rescale=1./255,
+def generate_video_sequences(video_dir, sequence_length, stride):
+    """
+    Genera secuencias de frames a partir de archivos de video en un directorio.  
+    Cada secuencia se representa como una tupla: (ruta_del_video, frame_inicial)
+    """
+    video_extensions = ('.mp4', '.avi', '.mov', '.mkv')
+    sequences = []
+    video_files = [os.path.join(video_dir, f) for f in os.listdir(video_dir)
+                   if f.lower().endswith(video_extensions)]
+    video_files.sort()
+    for video_file in video_files:
+        cap = cv2.VideoCapture(video_file)
+        if not cap.isOpened():
+            print(f"Advertencia: No se pudo abrir el video {video_file}. Se omite.")
+            continue
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+        cap.release()
+        if total_frames < sequence_length:
+            print(f"Advertencia: El video {video_file} tiene menos frames ({total_frames}) que SEQUENCE_LENGTH ({sequence_length}). Se omite.")
+            continue
+        for start in range(0, total_frames - sequence_length + 1, stride):
+            sequences.append((video_file, start))
+    return sequences
+
+# ==================== GENERADOR PERSONALIZADO PARA SECUENCIAS DE VIDEO ====================
+class VideoSequenceDataGenerator(tf.keras.utils.Sequence):
+    """
+    Generador de datos que carga secuencias de frames directamente desde videos.  
+    Cada muestra es una secuencia extraída de un video usando una ventana deslizante.
+    """
+    def __init__(self, samples, labels, batch_size, target_size, sequence_length, augmenter=None, shuffle=True):
+        self.samples = samples
+        self.labels = labels
+        self.batch_size = batch_size
+        self.target_size = target_size  # (ancho, alto)
+        self.sequence_length = sequence_length
+        self.augmenter = augmenter
+        self.shuffle = shuffle
+        self.on_epoch_end()
+    
+    def on_epoch_end(self):
+        if self.shuffle:
+            indices = np.arange(len(self.samples))
+            np.random.shuffle(indices)
+            self.samples = [self.samples[i] for i in indices]
+            self.labels = [self.labels[i] for i in indices]
+    
+    def __len__(self):
+        return int(np.ceil(len(self.samples) / self.batch_size))
+    
+    def __getitem__(self, index):
+        batch_samples = self.samples[index * self.batch_size:(index + 1) * self.batch_size]
+        batch_labels = self.labels[index * self.batch_size:(index + 1) * self.batch_size]
+        X = []
+        for (video_path, start_frame) in batch_samples:
+            frames = read_video_sequence(video_path, start_frame, self.sequence_length, self.target_size)
+            if self.augmenter is not None:
+                seed = np.random.randint(0, 100000)
+                augmented_frames = []
+                for frame in frames:
+                    augmented_frame = self.augmenter.random_transform(frame, seed=seed)
+                    augmented_frames.append(augmented_frame)
+                frames = np.array(augmented_frames)
+            X.append(frames)
+        X = np.array(X)  # (batch_size, SEQUENCE_LENGTH, height, width, 3)
+        y = np.array(batch_labels)
+        return X, y
+
+# ==================== CREACIÓN DE GENERADORES DE DATOS ====================
+def create_video_sequence_generators():
+    """
+    Crea generadores de datos para entrenamiento y validación a partir de videos.  
+    Se asume que el dataset está organizado en dos carpetas dentro de 'data_car':
+      - 'Normal_Videos_for_Event_Recognition'
+      - 'CrashAccidents'
+    """
+    data_dir = 'data_car'
+    classes = ['Normal_Videos_for_Event_Recognition', 'CrashAccidents']
+    train_samples = []
+    train_labels = []
+    val_samples = []
+    val_labels = []
+    stride = Config.FRAME_STRIDE
+    
+    for class_idx, class_name in enumerate(classes):
+        class_path = os.path.join(data_dir, class_name)
+        sequences = generate_video_sequences(class_path, Config.SEQUENCE_LENGTH, stride)
+        np.random.shuffle(sequences)
+        split_index = int(len(sequences) * (1 - Config.VALIDATION_SPLIT))
+        train_sequences = sequences[:split_index]
+        val_sequences = sequences[split_index:]
+        train_samples.extend(train_sequences)
+        train_labels.extend([class_idx] * len(train_sequences))
+        val_samples.extend(val_sequences)
+        val_labels.extend([class_idx] * len(val_sequences))
+    
+    # Data augmentation para entrenamiento
+    train_augmenter = tf.keras.preprocessing.image.ImageDataGenerator(
         rotation_range=Config.ROTATION_RANGE,
         width_shift_range=Config.SHIFT_RANGE,
         height_shift_range=Config.SHIFT_RANGE,
         zoom_range=Config.ZOOM_RANGE,
         brightness_range=Config.BRIGHTNESS_RANGE,
         horizontal_flip=True,
-        fill_mode='nearest',
-        validation_split=Config.VALIDATION_SPLIT
+        fill_mode='nearest'
     )
-
-    valid_datagen = ImageDataGenerator(
-        rescale=1./255,
-        validation_split=Config.VALIDATION_SPLIT
+    val_augmenter = None
+    
+    train_generator = VideoSequenceDataGenerator(
+        samples=train_samples,
+        labels=train_labels,
+        batch_size=Config.BATCH_SIZE,
+        target_size=(Config.IMG_SIZE, Config.IMG_SIZE),
+        sequence_length=Config.SEQUENCE_LENGTH,
+        augmenter=train_augmenter,
+        shuffle=True
     )
-
-    try:
-        train_generator = train_datagen.flow_from_directory(
-            'data',
-            target_size=(Config.IMG_SIZE, Config.IMG_SIZE),
-            batch_size=Config.BATCH_SIZE,
-            class_mode='binary',
-            classes=['NormalVideos', 'RoadAccidents'],
-            subset='training',
-            shuffle=True,
-            seed=42
-        )
-
-        validation_generator = valid_datagen.flow_from_directory(
-            'data',
-            target_size=(Config.IMG_SIZE, Config.IMG_SIZE),
-            batch_size=Config.BATCH_SIZE,
-            class_mode='binary',
-            classes=['NormalVideos', 'RoadAccidents'],
-            subset='validation',
-            shuffle=False,
-            seed=42
-        )
-    except Exception as e:
-        print(f"Error cargando datos: {str(e)}")
-        raise e
+    
+    validation_generator = VideoSequenceDataGenerator(
+        samples=val_samples,
+        labels=val_labels,
+        batch_size=Config.BATCH_SIZE,
+        target_size=(Config.IMG_SIZE, Config.IMG_SIZE),
+        sequence_length=Config.SEQUENCE_LENGTH,
+        augmenter=val_augmenter,
+        shuffle=False
+    )
     
     if Config.USE_CLASS_WEIGHTS:
-        total = len(train_generator.classes)
-        class_counts = np.bincount(train_generator.classes)
-        # Ajustando pesos para favorecer precisión en accidentes
+        total = len(train_labels)
+        class_counts = np.bincount(train_labels)
         class_weights = {
-            0: 1.0,  # Normal
-            1: 2.0 * (total / (2 * class_counts[1]))  # Doble peso para accidentes
+            0: 1.0,
+            1: (total / class_counts[1]) if class_counts[1] > 0 else 1.0
         }
-        print(f"\nPesos de clases calculados: {class_weights}")
+        print(f"Pesos de clases calculados: {class_weights}")
     else:
         class_weights = None
     
     return train_generator, validation_generator, class_weights
 
-def evaluate_model(model, data_dir='data', results_dir=None):
-    """Evalúa el modelo y genera visualizaciones y métricas"""
-    print("\nCargando datos de evaluación...")
-    eval_datagen = ImageDataGenerator(rescale=1./255)
+def create_evaluation_sequence_generator(data_dir='data_car'):
+    """
+    Crea un generador para evaluación a partir de videos (sin data augmentation).  
+    Se asume que el dataset en 'data_car' contiene las carpetas:
+      - 'Normal_Videos_for_Event_Recognition'
+      - 'CrashAccidents'
+    """
+    classes = ['Normal_Videos_for_Event_Recognition', 'CrashAccidents']
+    samples = []
+    labels = []
+    stride = Config.FRAME_STRIDE
     
-    eval_generator = eval_datagen.flow_from_directory(
-        data_dir,
-        target_size=(Config.IMG_SIZE, Config.IMG_SIZE),
+    for class_idx, class_name in enumerate(classes):
+        class_path = os.path.join(data_dir, class_name)
+        sequences = generate_video_sequences(class_path, Config.SEQUENCE_LENGTH, stride)
+        for seq in sequences:
+            samples.append(seq)
+            labels.append(class_idx)
+    
+    eval_generator = VideoSequenceDataGenerator(
+        samples=samples,
+        labels=labels,
         batch_size=Config.BATCH_SIZE,
-        class_mode='binary',
-        classes=['NormalVideos', 'RoadAccidents'],
+        target_size=(Config.IMG_SIZE, Config.IMG_SIZE),
+        sequence_length=Config.SEQUENCE_LENGTH,
+        augmenter=None,
         shuffle=False
     )
+    return eval_generator
+
+# ==================== DEFINICIÓN DEL MODELO LIVIANO ====================
+def create_model(training=True):
+    """
+    Crea y compila un modelo liviano para la detección de accidentes en secuencias de video,
+    optimizado para entrenamiento en CPU.
+    """
+    sequence_input = Input(shape=(Config.SEQUENCE_LENGTH, Config.IMG_SIZE, Config.IMG_SIZE, 3), name='video_input')
+    
+    # Base model: MobileNetV2 preentrenado en ImageNet (más ligero que EfficientNetB0)
+    base_model = MobileNetV2(
+        weights='imagenet',
+        include_top=False,
+        input_shape=(Config.IMG_SIZE, Config.IMG_SIZE, 3)
+    )
+    base_model.trainable = False  # Congelamos el modelo base para reducir el cómputo
+    
+    # Extracción de características por frame
+    x = TimeDistributed(base_model)(sequence_input)
+    x = TimeDistributed(GlobalAveragePooling2D())(x)  # (batch, SEQUENCE_LENGTH, features)
+    
+    # Capa LSTM simple para capturar la información temporal
+    x = LSTM(64, return_sequences=False)(x)
+    
+    # Capas densas para la clasificación final
+    x = Dense(32, activation='relu')(x)
+    outputs = Dense(1, activation='sigmoid', dtype='float32')(x)
+    
+    model = Model(inputs=sequence_input, outputs=outputs, name='accident_detector_video_light')
+    
+    if training:
+        optimizer = tf.keras.optimizers.Adam(learning_rate=Config.INITIAL_LR)
+        model.compile(
+            optimizer=optimizer,
+            loss='binary_crossentropy',
+            metrics=['accuracy']
+        )
+    
+    return model
+
+# ==================== EVALUACIÓN DEL MODELO ====================
+def evaluate_model(model, data_dir='data_car', results_dir=None):
+    """
+    Evalúa el modelo utilizando un generador basado en secuencias extraídas de videos.
+    Genera reportes y visualizaciones (ROC, Precision-Recall y Matriz de Confusión) y los guarda en un directorio.
+    """
+    print("\nCargando datos de evaluación...")
+    eval_generator = create_evaluation_sequence_generator(data_dir)
     
     print("\nRealizando predicciones...")
-    predictions_proba = model.predict(eval_generator)
-    predictions = (predictions_proba > 0.5).astype(int)
-    true_labels = eval_generator.classes
+    predictions_proba = model.predict(eval_generator).flatten()
+    predictions = (predictions_proba > Config.PRECISION_THRESHOLD).astype(int)
+    true_labels = np.array(eval_generator.labels)
     
-    # Calcular métricas
     print("\nCalculando métricas...")
-    report = classification_report(true_labels, predictions, target_names=['Normal', 'Accidente'], output_dict=True)
+    unique_classes = np.unique(np.concatenate([true_labels, predictions]))
+    if len(unique_classes) == 1:
+        target_names = ['Normal_Videos_for_Event_Recognition'] if 0 in unique_classes else ['CrashAccidents']
+    else:
+        target_names = ['Normal_Videos_for_Event_Recognition', 'CrashAccidents']
     
-    # ROC y PR curves
+    report = classification_report(
+        true_labels, predictions,
+        target_names=target_names,
+        output_dict=True
+    )
+    
     fpr, tpr, _ = roc_curve(true_labels, predictions_proba)
     roc_auc = auc(fpr, tpr)
     
     precision, recall, _ = precision_recall_curve(true_labels, predictions_proba)
     pr_auc = auc(recall, precision)
     
-    # Matriz de confusión
     cm = confusion_matrix(true_labels, predictions)
     
     if results_dir is None:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         results_dir = f"evaluation_results_{timestamp}"
-    
     os.makedirs(results_dir, exist_ok=True)
     
-    # Generar visualizaciones
-    print("\nGenerando visualizaciones...")
-    
-    # ROC Curve
     plt.figure(figsize=(10, 8))
     plt.plot(fpr, tpr, color='darkorange', lw=2, label=f'ROC curve (AUC = {roc_auc:.4f})')
     plt.plot([0, 1], [0, 1], color='navy', lw=2, linestyle='--')
@@ -224,7 +393,6 @@ def evaluate_model(model, data_dir='data', results_dir=None):
     plt.savefig(os.path.join(results_dir, 'roc_curve.png'))
     plt.close()
     
-    # Precision-Recall Curve
     plt.figure(figsize=(10, 8))
     plt.plot(recall, precision, color='blue', lw=2, label=f'PR curve (AUC = {pr_auc:.4f})')
     plt.xlim([0.0, 1.0])
@@ -236,42 +404,35 @@ def evaluate_model(model, data_dir='data', results_dir=None):
     plt.savefig(os.path.join(results_dir, 'pr_curve.png'))
     plt.close()
     
-    # Confusion Matrix
     plt.figure(figsize=(10, 8))
     sns.heatmap(cm, annot=True, fmt='d', cmap='Blues')
     plt.title('Matriz de Confusión')
-    plt.ylabel('Verdadero')
-    plt.xlabel('Predicho')
+    plt.ylabel('Etiqueta Verdadera')
+    plt.xlabel('Etiqueta Predicha')
     plt.savefig(os.path.join(results_dir, 'confusion_matrix.png'))
     plt.close()
     
-    # Guardar métricas en un archivo de texto
     with open(os.path.join(results_dir, 'metrics_report.txt'), 'w') as f:
         f.write("==================================================\n")
         f.write("REPORTE DE EVALUACIÓN DEL MODELO DE DETECCIÓN DE ACCIDENTES\n")
         f.write("==================================================\n\n")
-        
         f.write("1. MÉTRICAS PRINCIPALES\n")
-        f.write("--------------------\n")
+        f.write("-------------------------\n")
         f.write(f"Accuracy: {report['accuracy']:.4f}\n")
         f.write(f"ROC AUC: {roc_auc:.4f}\n")
         f.write(f"PR AUC: {pr_auc:.4f}\n\n")
-        
         f.write("2. MÉTRICAS POR CLASE\n")
-        f.write("--------------------\n\n")
-        class_mapping = {'Normal': 'Normal', 'Accidente': 'RoadAccidents'}
-        for display_name, report_name in class_mapping.items():
-            f.write(f"Clase: {display_name}\n")
-            f.write(f"Precision: {report[report_name]['precision']:.4f}\n")
-            f.write(f"Recall: {report[report_name]['recall']:.4f}\n")
-            f.write(f"F1-score: {report[report_name]['f1-score']:.4f}\n\n")
-        
+        f.write("-------------------------\n\n")
+        for class_name in target_names:
+            f.write(f"Clase: {class_name}\n")
+            f.write(f"Precision: {report[class_name]['precision']:.4f}\n")
+            f.write(f"Recall: {report[class_name]['recall']:.4f}\n")
+            f.write(f"F1-score: {report[class_name]['f1-score']:.4f}\n\n")
         f.write("3. MATRIZ DE CONFUSIÓN\n")
-        f.write("--------------------\n")
+        f.write("-------------------------\n")
         f.write("Filas: Verdadero, Columnas: Predicho\n")
         f.write(str(cm))
     
-    # Imprimir resumen
     print("\nRESUMEN DE RESULTADOS:")
     with open(os.path.join(results_dir, 'metrics_report.txt'), 'r') as f:
         print(f.read())
@@ -286,8 +447,15 @@ def evaluate_model(model, data_dir='data', results_dir=None):
         'classification_report': report
     }
 
+# ==================== ENTRENAMIENTO ====================
 def train_model():
-    """Entrenamiento optimizado para precisión"""
+    """
+    Función principal de entrenamiento adaptada para CPU con un modelo liviano:
+      - Configura el entorno.
+      - Genera los generadores de datos a partir de secuencias de videos.
+      - Crea y entrena el modelo.
+      - Evalúa el rendimiento y guarda los resultados.
+    """
     print("\nConfigurando entrenamiento...")
     Config.setup()
     
@@ -295,35 +463,42 @@ def train_model():
     results_dir = f"training_results_{timestamp}"
     os.makedirs(results_dir, exist_ok=True)
     
+    # Scheduler para disminuir el learning rate
+    def scheduler(epoch, lr):
+        return lr * 0.95
+    lr_scheduler = LearningRateScheduler(scheduler, verbose=1)
+    
     callbacks = [
         ModelCheckpoint(
-            os.path.join(results_dir, 'best_model.h5'),
-            monitor='val_precision',  # Cambiado a precision
+            os.path.join(results_dir, 'best_model_accident_video_light.h5'),
+            monitor='val_accuracy',
             mode='max',
             save_best_only=True,
             verbose=1
         ),
         EarlyStopping(
-            monitor='val_precision',  # Cambiado a precision
+            monitor='val_accuracy',
             mode='max',
-            patience=8,  # Aumentado para dar más tiempo
+            patience=5,
             restore_best_weights=True,
             verbose=1
         ),
         ReduceLROnPlateau(
-            monitor='val_precision',  # Cambiado a precision
+            monitor='val_accuracy',
             mode='max',
             factor=0.5,
-            patience=4,
+            patience=3,
             min_lr=Config.MIN_LR,
             verbose=1
-        )
+        ),
+        lr_scheduler,
+        TimeRemainingCallback()
     ]
     
-    train_generator, validation_generator, class_weights = create_data_generators()
+    train_generator, validation_generator, class_weights = create_video_sequence_generators()
     model = create_model(training=True)
     
-    print("\nIniciando entrenamiento...")
+    print("\nIniciando entrenamiento del detector de accidentes (modelo liviano, CPU)...")
     try:
         history = model.fit(
             train_generator,
@@ -335,17 +510,64 @@ def train_model():
         )
         
         print("\nEvaluando el modelo...")
-        evaluation_metrics = evaluate_model(model, 'data', results_dir)
+        evaluation_metrics = evaluate_model(model, data_dir='data_car', results_dir=results_dir)
         
         return model, history, results_dir, evaluation_metrics
         
     except Exception as e:
-        print(f"\nError durante el entrenamiento: {str(e)}")
+        print(f"\nError durante el entrenamiento: {e}")
         raise e
 
+# ==================== (Opcional) INFERENCIA EN TIEMPO REAL ====================
+def preprocess_frame(frame):
+    """
+    Preprocesa un frame para la inferencia en tiempo real:  
+      - Convierte BGR a RGB  
+      - Redimensiona al tamaño requerido  
+      - Aplica el preprocesamiento de MobileNetV2
+    """
+    frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+    frame = cv2.resize(frame, (Config.IMG_SIZE, Config.IMG_SIZE))
+    frame = preprocess_input(frame)
+    return frame
+
+def trigger_alert():
+    """
+    Función placeholder para activar una alerta (por ejemplo, enviar una notificación).
+    """
+    print("¡Alerta de accidente detectada!")
+
+def real_time_detection(camera_source=0):
+    """
+    Realiza detección en tiempo real usando el modelo entrenado.  
+    Se captura video desde la cámara (o fuente de video), se preprocesan los frames,  
+    se acumula en un buffer y cuando se tiene una secuencia completa se realiza la predicción.
+    """
+    model = tf.keras.models.load_model('best_model_accident_video_light.h5')
+    buffer = []
+    
+    cap = cv2.VideoCapture(camera_source)
+    while True:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        
+        processed = preprocess_frame(frame)
+        buffer.append(processed)
+        
+        if len(buffer) == Config.SEQUENCE_LENGTH:
+            prediction = model.predict(np.expand_dims(buffer, 0))
+            if prediction[0][0] > Config.PRECISION_THRESHOLD:
+                trigger_alert()
+            buffer.pop(0)
+    cap.release()
+
+# ==================== BLOQUE PRINCIPAL ====================
 if __name__ == "__main__":
     try:
         model, history, results_dir, evaluation_metrics = train_model()
-        print(f"\nEntrenamiento y evaluación del detector de accidentes completados exitosamente!")
+        print("\n¡Entrenamiento y evaluación del detector de accidentes completados exitosamente!")
+        # Para realizar inferencia en tiempo real, descomenta la siguiente línea:
+        # real_time_detection(camera_source=0)
     except Exception as e:
-        print(f"\nError en el proceso: {str(e)}")
+        print(f"\nError en el proceso: {e}")

@@ -1,9 +1,28 @@
 ==================================================
-REPORTE DE EVALUACIï¿½N DEL MODELO DE DETECCIï¿½N DE ACCIDENTES
+REPORTE DE EVALUACIÓN DEL MODELO DE DETECCIÓN DE ACCIDENTES
 ==================================================
 
-1. Mï¿½TRICAS PRINCIPALES
---------------------
-Accuracy: 0.9382
-ROC AUC: 0.9794
-PR AUC: 0.9876
+1. MÉTRICAS PRINCIPALES
+-------------------------
+Accuracy: 0.9641
+ROC AUC: 0.9893
+PR AUC: 0.9881
+
+2. MÉTRICAS POR CLASE
+-------------------------
+
+Clase: NormalVideos
+Precision: 0.9803
+Recall: 0.9474
+F1-score: 0.9636
+
+Clase: RoadAccidents
+Precision: 0.9490
+Recall: 0.9809
+F1-score: 0.9647
+
+3. MATRIZ DE CONFUSIÓN
+-------------------------
+Filas: Verdadero, Columnas: Predicho
+[[24825  1377]
+ [  500 25649]]
