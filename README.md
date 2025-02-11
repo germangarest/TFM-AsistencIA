@@ -30,20 +30,20 @@ Además, se incorporan funcionalidades adicionales para mejorar la respuesta y f
 ---
 
 ## 2. Obtención de datos
-### ACCIDENTES DE COCHE Y PELEAS:
+## ACCIDENTES DE COCHE Y PELEAS:
 En cuanto al tema de los datos, hubo bastantes problemas con los modelos de accidentes de coche y peleas. Primero, comenzamos probando un dataset de imágenes, las cuales habían sido extraídas de los videos respectivos, el cual era de [Kaggle](https://www.kaggle.com/datasets/odins0n/ucf-crime-dataset). Entrenamos el modelo y daba una alta precisión, pero al probarlo en la aplicación web de Streamlit con otros videos, daba precisiones del 100% en cualquier parte del video, incluso si no se veía un accidente ni una pelea, por lo que después de muchos intentos de optimizaciones, pasamos a entrenar el modelo con el mismo dataset pero directamente con los videos, el cual estaba en la página oficial [University of Central Florida](https://www.crcv.ucf.edu/projects/real-world/).
 
 Una vez más, el modelo no respondía bien, aunque esta vez directamente daba una precisión bajísima, por lo que el dataset era inútil. Finalmente, nos dimos cuenta de que el problema era que los videos de peleas (o accidentes) eran de varios minutos en los que no solo se mostraba el incidente, sino que el incidente duraba 5 o 10 segundos y el resto era una situación normal, por lo que el modelo no sabía diferenciar qué era una situación anómala.
 
 Después de todos estos problemas, finalmente, nos dimos cuenta de que la mejor manera para entrenar un modelo de estas características era coger clips cortos donde solo se muestre el incidente, y que el modelo aprenda las características y parámetros para la predicción.
 
-#### DATASET USADO ACCIDENTES DE COCHE:
+### DATASET USADO ACCIDENTES DE COCHE:
 Finalmente, para el modelo de accidentes de coche usamos el [CarCrashDataset en Github](https://github.com/Cogito2012/CarCrashDataset). Estos clips han sido obtenidos de grabaciones de cámaras en el salpicadero de coches (dashcam). El dataset incluye diferentes situaciones medioambientales para una mejor variabilidad.
 
-#### DATASET USADO PELEAS:
+### DATASET USADO PELEAS:
 Para el modelo de peleas, usamos el [RWF-2000 de Hugging Face](https://huggingface.co/datasets/DanJoshua/RWF-2000). Estos videos han sido sacados de cámaras de vigilancia.
 
-### INCENDIOS:
+## INCENDIOS:
 
 ---
 
