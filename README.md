@@ -12,6 +12,30 @@ El proyecto _AsistencIA_ tiene como objetivo desarrollar un sistema integral que
 
 - **Accidentes de coche**
 - **Incendios**
+Para la deteccion de incendios/fuegos, hemos usado un modelo de deep learning que implementa una CNN (Red Neuronal Convolucional) para captar fuego en imágenes, con un rendimiento del 95% de precisión. El modelo se entrena con un dataset obtenido de Kaggle con unas 2.000 imágenes, con una distribución al 50% de fuego/no fuego. Algunos aspectos claves del modelo son:
+
+### Dataset y preprocesamiento:
+- Todas las imágenes redimensionadas a 128x128 píxeles.
+- Data Augmentation para ampliar el dataset (rotaciones, zoom, volteos).
+
+### Arquitectura CNN:
+- Capas convolucionales con ReLU y MaxPooling.
+- BatchNormalization y Dropout (0.5) para evitar sobreajuste.
+- Capas densas finales con softmax para clasificación binaria.
+
+### Entrenamiento y rendimiento:
+- 20 épocas, lotes de 8 imágenes, optimizador Adam.
+- Precisión final ~95% en pruebas.
+- Buena generalización sin sobreajuste significativo.
+- Early Stopping y checkpoints para optimizar el entrenamiento.
+
+### Evaluación:
+- Matriz de confusión muestra pocos falsos positivos/negativos.
+- Pérdida decreciente y estable.
+- Incluye función para probar con imágenes aleatorias.
+
+El modelo demuestra ser robusto y fiable para la detección de fuego, siendo adecuado para aplicaciones prácticas.
+
 - **Peleas**
 
 Además, se incorporan funcionalidades adicionales para mejorar la respuesta y formación de los ciudadanos ante situaciones de emergencia:
