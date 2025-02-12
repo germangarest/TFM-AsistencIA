@@ -1,27 +1,3 @@
-# --- Parchar la función extract_paths para evitar el error con Torch ---
-try:
-    import streamlit.watcher.local_sources_watcher as watcher
-    
-    def safe_extract_paths(module):
-        try:
-            p = module.__path__
-            # Si ya es una lista, la retornamos directamente
-            if isinstance(p, list):
-                return p
-            # Si el objeto tiene atributo _path, lo usamos
-            if hasattr(p, "_path"):
-                return list(p._path)
-            # Como fallback, intentamos convertirlo a lista
-            return list(p)
-        except Exception:
-            return []
-    
-    # Reemplazamos la función original por la segura
-    watcher.extract_paths = safe_extract_paths
-except Exception as e:
-    # Si por alguna razón falla el parche, mostramos el error en consola
-    print(f"Error al aplicar el parche para extract_paths: {e}")
-
 import streamlit as st
 import cv2
 import numpy as np
@@ -129,16 +105,21 @@ def load_models():
         dummy_accident = tf.zeros((1, SEQUENCE_LENGTH, ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE, 3))
         accident_model(dummy_accident)
         
-        # --- Modelo de Incendios (TensorFlow) ---
+    # --- Modelo de Incendios (TensorFlow) ---
+    from tensorflow.keras.layers import BatchNormalization, TimeDistributed  # Asegúrate de tener estas importaciones
+
         custom_objects = {
             'DTypePolicy': tf.keras.mixed_precision.Policy,
             'InputLayer': FixedInputLayer,
-            'BatchNormalization': BatchNormalization,
-            'TimeDistributed': TimeDistributed
+            'BatchNormalization': BatchNormalization,  # Se añade BatchNormalization
+            'TimeDistributed': TimeDistributed           # Se añade TimeDistributed (si se utiliza)
         }
 
-        with tf.keras.utils.custom_object_scope(custom_objects):
-            fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False)
+        fire_model = tf.keras.models.load_model(
+            'models/model_fire.h5',
+            compile=False,
+            custom_objects=custom_objects
+        )
         dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
         _ = fire_model(dummy_fire)
         fire_model.compile(jit_compile=True)
