@@ -73,9 +73,12 @@ except ImportError:
 from tensorflow.keras.layers import InputLayer as _InputLayer
 class FixedInputLayer(_InputLayer):
     def __init__(self, **kwargs):
+        # Si se especifica 'batch_shape', se transforma a 'batch_input_shape'
         if 'batch_shape' in kwargs:
             kwargs['batch_input_shape'] = kwargs.pop('batch_shape')
         super(FixedInputLayer, self).__init__(**kwargs)
+        # Agregar el atributo que falta para evitar el error
+        self._self_tracked_trackables = {}
 
 # Registrar TimeDistributed para que Keras la reconozca al cargar el modelo
 from tensorflow.keras.layers import TimeDistributed
