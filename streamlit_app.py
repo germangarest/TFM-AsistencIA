@@ -108,8 +108,11 @@ def load_models():
         # --- Modelo de Incendios (TensorFlow) ---
         custom_objects = {
             'DTypePolicy': tf.keras.mixed_precision.Policy,
-            'InputLayer': FixedInputLayer
+            'InputLayer': FixedInputLayer,
+            'BatchNormalization': BatchNormalization,
+            'TimeDistributed': TimeDistributed
         }
+
         with tf.keras.utils.custom_object_scope(custom_objects):
             fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False)
         dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
