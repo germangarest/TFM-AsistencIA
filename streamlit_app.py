@@ -62,6 +62,13 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
+try:
+    from tensorflow.python.keras.engine.functional import Functional
+    tf.keras.utils.get_custom_objects()['Functional'] = Functional
+except ImportError:
+    # Si no se encuentra, puede que estés usando una versión en la que no es necesario
+    pass
+
 # Versión "arreglada" de InputLayer para evitar conflictos
 from tensorflow.keras.layers import InputLayer as _InputLayer
 class FixedInputLayer(_InputLayer):
@@ -69,6 +76,14 @@ class FixedInputLayer(_InputLayer):
         if 'batch_shape' in kwargs:
             kwargs['batch_input_shape'] = kwargs.pop('batch_shape')
         super(FixedInputLayer, self).__init__(**kwargs)
+
+# Registrar TimeDistributed para que Keras la reconozca al cargar el modelo
+from tensorflow.keras.layers import TimeDistributed
+tf.keras.utils.get_custom_objects()['TimeDistributed'] = TimeDistributed
+
+# Registrar BatchNormalization para la deserialización
+from tensorflow.keras.layers import BatchNormalization
+tf.keras.utils.get_custom_objects()['BatchNormalization'] = BatchNormalization
 
 # Optimización XLA para TensorFlow
 tf.config.optimizer.set_jit(True)
@@ -90,16 +105,24 @@ def load_models():
         dummy_accident = tf.zeros((1, SEQUENCE_LENGTH, ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE, 3))
         accident_model(dummy_accident)
         
-        # --- Modelo de Incendios (TensorFlow) ---
-        custom_objects = {
-            'DTypePolicy': tf.keras.mixed_precision.Policy,
-            'InputLayer': FixedInputLayer
-        }
-        with tf.keras.utils.custom_object_scope(custom_objects):
-            fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False)
-        dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
-        _ = fire_model(dummy_fire)
-        fire_model.compile(jit_compile=True)
+    # --- Modelo de Incendios (TensorFlow) ---
+    from tensorflow.keras.layers import BatchNormalization, TimeDistributed 
+
+    custom_objects = {
+        'DTypePolicy': tf.keras.mixed_precision.Policy,
+        'InputLayer': FixedInputLayer,
+        'BatchNormalization': BatchNormalization,
+        'TimeDistributed': TimeDistributed        
+    }
+
+    fire_model = tf.keras.models.load_model(
+        'models/model_fire.h5',
+        compile=False,
+        custom_objects=custom_objects
+    )
+    dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
+    _ = fire_model(dummy_fire)
+    fire_model.compile(jit_compile=True)
     
     # --- Modelo de Peleas (PyTorch) ---
     # Definición de la arquitectura utilizada
