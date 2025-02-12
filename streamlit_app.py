@@ -106,23 +106,23 @@ def load_models():
         accident_model(dummy_accident)
         
     # --- Modelo de Incendios (TensorFlow) ---
-    from tensorflow.keras.layers import BatchNormalization, TimeDistributed  # Asegúrate de tener estas importaciones
+    from tensorflow.keras.layers import BatchNormalization, TimeDistributed 
 
-        custom_objects = {
-            'DTypePolicy': tf.keras.mixed_precision.Policy,
-            'InputLayer': FixedInputLayer,
-            'BatchNormalization': BatchNormalization,  # Se añade BatchNormalization
-            'TimeDistributed': TimeDistributed           # Se añade TimeDistributed (si se utiliza)
-        }
+    custom_objects = {
+        'DTypePolicy': tf.keras.mixed_precision.Policy,
+        'InputLayer': FixedInputLayer,
+        'BatchNormalization': BatchNormalization,
+        'TimeDistributed': TimeDistributed        
+    }
 
-        fire_model = tf.keras.models.load_model(
-            'models/model_fire.h5',
-            compile=False,
-            custom_objects=custom_objects
-        )
-        dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
-        _ = fire_model(dummy_fire)
-        fire_model.compile(jit_compile=True)
+    fire_model = tf.keras.models.load_model(
+        'models/model_fire.h5',
+        compile=False,
+        custom_objects=custom_objects
+    )
+    dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
+    _ = fire_model(dummy_fire)
+    fire_model.compile(jit_compile=True)
     
     # --- Modelo de Peleas (PyTorch) ---
     # Definición de la arquitectura utilizada
