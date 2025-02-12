@@ -77,6 +77,10 @@ class FixedInputLayer(_InputLayer):
             kwargs['batch_input_shape'] = kwargs.pop('batch_shape')
         super(FixedInputLayer, self).__init__(**kwargs)
 
+# Registrar TimeDistributed para que Keras la reconozca al cargar el modelo
+from tensorflow.keras.layers import TimeDistributed
+tf.keras.utils.get_custom_objects()['TimeDistributed'] = TimeDistributed
+
 # Optimización XLA para TensorFlow
 tf.config.optimizer.set_jit(True)
 tf.config.threading.set_inter_op_parallelism_threads(1)
