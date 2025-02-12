@@ -99,8 +99,12 @@ tf.keras.utils.get_custom_objects().update({
     'DTypePolicy': tf.keras.mixed_precision.Policy,
     'InputLayer': FixedInputLayer,
     'BatchNormalization': BatchNormalization,
+    'BatchNormalizationV2': BatchNormalization, 
     'TimeDistributed': TimeDistributed
 })
+
+# Actualizamos el diccionario global de custom objects
+tf.keras.utils.get_custom_objects().update(custom_objects)
 
 # ====================== CARGA DE MODELOS ======================
 @st.cache_resource(show_spinner=False)
