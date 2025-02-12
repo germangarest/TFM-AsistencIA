@@ -93,15 +93,14 @@ tf.config.optimizer.set_jit(True)
 tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
-# Registrar los objetos personalizados globalmente
 from tensorflow.keras.layers import BatchNormalization, TimeDistributed
-tf.keras.utils.get_custom_objects().update({
+custom_objects = {
     'DTypePolicy': tf.keras.mixed_precision.Policy,
     'InputLayer': FixedInputLayer,
     'BatchNormalization': BatchNormalization,
-    'BatchNormalizationV2': BatchNormalization, 
-    'TimeDistributed': TimeDistributed
-})
+    'BatchNormalizationV2': BatchNormalization,  # En caso de que se requiera esta versión
+    'TimeDistributed': TimeDistributed        
+}
 
 # Actualizamos el diccionario global de custom objects
 tf.keras.utils.get_custom_objects().update(custom_objects)
