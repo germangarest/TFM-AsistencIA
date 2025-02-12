@@ -113,7 +113,7 @@ def load_models():
     """
     with tf.device('/GPU:0' if gpus else '/CPU:0'):
         # --- Modelo de Accidentes (TensorFlow) ---
-        accident_model = tf.keras.models.load_model('models/model_car.h5', compile=False)
+        accident_model = tf.keras.models.load_model('models/model_car.h5', compile=False, custom_objects=custom_objects)
         accident_model.compile(jit_compile=True)
         dummy_accident = tf.zeros((1, SEQUENCE_LENGTH, ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE, 3))
         accident_model(dummy_accident)
