@@ -81,6 +81,10 @@ class FixedInputLayer(_InputLayer):
 from tensorflow.keras.layers import TimeDistributed
 tf.keras.utils.get_custom_objects()['TimeDistributed'] = TimeDistributed
 
+# Registrar BatchNormalization para la deserialización
+from tensorflow.keras.layers import BatchNormalization
+tf.keras.utils.get_custom_objects()['BatchNormalization'] = BatchNormalization
+
 # Optimización XLA para TensorFlow
 tf.config.optimizer.set_jit(True)
 tf.config.threading.set_inter_op_parallelism_threads(1)
