@@ -62,6 +62,12 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
+from tensorflow.keras.layers import BatchNormalization as OriginalBatchNormalization
+
+@tf.keras.utils.register_keras_serializable()
+class CustomBatchNormalization(OriginalBatchNormalization):
+    pass
+
 try:
     from tensorflow.python.keras.engine.functional import Functional
     tf.keras.utils.get_custom_objects()['Functional'] = Functional
@@ -99,8 +105,8 @@ from tensorflow.keras.layers import BatchNormalization, TimeDistributed
 custom_objects = {
     'DTypePolicy': tf.keras.mixed_precision.Policy,
     'InputLayer': FixedInputLayer,
-    'BatchNormalization': BatchNormalization,
-    'BatchNormalizationV2': BatchNormalization,  # Por si el modelo lo requiere
+    'BatchNormalization': CustomBatchNormalization,
+    'BatchNormalizationV2': CustomBatchNormalization,  # Por si el modelo lo requiere
     'TimeDistributed': TimeDistributed        
 }
 tf.keras.utils.get_custom_objects().update(custom_objects)
@@ -119,14 +125,10 @@ def load_models():
         accident_model(dummy_accident)
         
     # --- Modelo de Incendios (TensorFlow) ---
-    fire_model = tf.keras.models.load_model(
-        'models/model_fire.h5',
-        compile=False,
-        custom_objects=custom_objects  # Se pasa el diccionario actualizado
-    )
+    fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False, custom_objects=custom_objects )
+    fire_model.compile(jit_compile=True)
     dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
     _ = fire_model(dummy_fire)
-    fire_model.compile(jit_compile=True)
     
     # --- Modelo de Peleas (PyTorch) ---
     class SimpleVideoClassifier(nn.Module):
