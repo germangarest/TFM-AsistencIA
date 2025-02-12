@@ -94,18 +94,17 @@ tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
 from tensorflow.keras.layers import BatchNormalization, TimeDistributed
+
+# Registrar globalmente los objetos personalizados
 custom_objects = {
     'DTypePolicy': tf.keras.mixed_precision.Policy,
     'InputLayer': FixedInputLayer,
     'BatchNormalization': BatchNormalization,
-    'BatchNormalizationV2': BatchNormalization,  # En caso de que se requiera esta versión
+    'BatchNormalizationV2': BatchNormalization,  # Por si el modelo lo requiere
     'TimeDistributed': TimeDistributed        
 }
-
-# Actualizamos el diccionario global de custom objects
 tf.keras.utils.get_custom_objects().update(custom_objects)
 
-# ====================== CARGA DE MODELOS ======================
 @st.cache_resource(show_spinner=False)
 def load_models():
     """
@@ -116,31 +115,20 @@ def load_models():
         # --- Modelo de Accidentes (TensorFlow) ---
         accident_model = tf.keras.models.load_model('models/model_car.h5', compile=False)
         accident_model.compile(jit_compile=True)
-        # Realizar una inferencia dummy para inicializar
         dummy_accident = tf.zeros((1, SEQUENCE_LENGTH, ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE, 3))
         accident_model(dummy_accident)
         
     # --- Modelo de Incendios (TensorFlow) ---
-    from tensorflow.keras.layers import BatchNormalization, TimeDistributed 
-
-    custom_objects = {
-        'DTypePolicy': tf.keras.mixed_precision.Policy,
-        'InputLayer': FixedInputLayer,
-        'BatchNormalization': BatchNormalization,
-        'TimeDistributed': TimeDistributed        
-    }
-
     fire_model = tf.keras.models.load_model(
         'models/model_fire.h5',
         compile=False,
-        custom_objects=custom_objects
+        custom_objects=custom_objects  # Se pasa el diccionario actualizado
     )
     dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
     _ = fire_model(dummy_fire)
     fire_model.compile(jit_compile=True)
     
     # --- Modelo de Peleas (PyTorch) ---
-    # Definición de la arquitectura utilizada
     class SimpleVideoClassifier(nn.Module):
         def __init__(self, num_classes=1):
             super(SimpleVideoClassifier, self).__init__()
@@ -149,7 +137,6 @@ def load_models():
             self.fc = nn.Linear(512, num_classes)
         
         def forward(self, x):
-            # Se espera entrada de forma (B, 3, T, H, W)
             B, C, T, H, W = x.shape
             x = x.permute(0, 2, 1, 3, 4).contiguous().view(B * T, C, H, W)
             features = self.resnet(x)
@@ -159,11 +146,9 @@ def load_models():
             return out
 
     fight_model = SimpleVideoClassifier()
-    # Cargar pesos del modelo (en CPU)
     fight_model.load_state_dict(torch.load('models/model_fight.pth', map_location=torch.device('cpu')))
     fight_model.eval()
 
-    # Mover el modelo al dispositivo adecuado (GPU si está disponible)
     torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     fight_model.to(torch_device)
     
