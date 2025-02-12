@@ -62,6 +62,13 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
+try:
+    from tensorflow.python.keras.engine.functional import Functional
+    tf.keras.utils.get_custom_objects()['Functional'] = Functional
+except ImportError:
+    # Si no se encuentra, puede que estés usando una versión en la que no es necesario
+    pass
+
 # Versión "arreglada" de InputLayer para evitar conflictos
 from tensorflow.keras.layers import InputLayer as _InputLayer
 class FixedInputLayer(_InputLayer):
