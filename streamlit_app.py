@@ -137,6 +137,7 @@ def load_models():
     _ = fire_model(dummy_fire)
     
     # --- Modelo de Peleas (PyTorch) ---
+    '''
     class SimpleVideoClassifier(nn.Module):
         def __init__(self, num_classes=1):
             super(SimpleVideoClassifier, self).__init__()
@@ -159,8 +160,9 @@ def load_models():
 
     torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     fight_model.to(torch_device)
+    '''
     
-    return accident_model, fire_model, fight_model, torch_device
+    return accident_model, fire_model, # fight_model, torch_device
 
 try:
     accident_model, fire_model, fight_model, torch_device = load_models()
