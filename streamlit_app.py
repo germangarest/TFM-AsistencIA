@@ -117,11 +117,6 @@ custom_objects = {
 }
 tf.keras.utils.get_custom_objects().update(custom_objects)
 
-# Optimización XLA y configuración de hilos (ajusta si es necesario)
-tf.config.optimizer.set_jit(True)
-tf.config.threading.set_inter_op_parallelism_threads(1)
-tf.config.threading.set_intra_op_parallelism_threads(1)
-
 # ====================================================
 # CARGA DE MODELOS (CACHÉ)
 # ====================================================
