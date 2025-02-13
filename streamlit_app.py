@@ -122,50 +122,24 @@ tf.keras.utils.get_custom_objects().update(custom_objects)
 # ====================================================
 @st.cache_resource(show_spinner=False)
 def load_models():
-    with tf.device('/GPU:0' if gpus else '/CPU:0'):
+    with tf.device('/CPU:0'):
         # --- Modelo de Accidentes (TensorFlow) ---
         accident_model = tf.keras.models.load_model('models/model_car.h5', compile=False, custom_objects=custom_objects)
         accident_model.compile(jit_compile=True)
-        # Dummy para compilar el grafo (puedes reducir el tamaño si es necesario)
         dummy_accident = tf.zeros((1, SEQUENCE_LENGTH, ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE, 3))
         accident_model(dummy_accident)
         
-    # --- Modelo de Incendios (TensorFlow) ---
-    fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False, custom_objects=custom_objects)
-    fire_model.compile(jit_compile=True)
-    dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
-    _ = fire_model(dummy_fire)
+        # --- Modelo de Incendios (TensorFlow) ---
+        fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False, custom_objects=custom_objects)
+        fire_model.compile(jit_compile=True)
+        dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
+        _ = fire_model(dummy_fire)
     
-    # --- Modelo de Peleas (PyTorch) ---
-    '''
-    class SimpleVideoClassifier(nn.Module):
-        def __init__(self, num_classes=1):
-            super(SimpleVideoClassifier, self).__init__()
-            self.resnet = torch.hub.load('pytorch/vision:v0.10.0', 'resnet18', pretrained=False)
-            self.resnet.fc = nn.Identity()
-            self.fc = nn.Linear(512, num_classes)
-        
-        def forward(self, x):
-            B, C, T, H, W = x.shape
-            x = x.permute(0, 2, 1, 3, 4).contiguous().view(B * T, C, H, W)
-            features = self.resnet(x)
-            features = features.view(B, T, -1)
-            features = features.mean(dim=1)
-            out = self.fc(features)
-            return out
-
-    fight_model = SimpleVideoClassifier()
-    fight_model.load_state_dict(torch.load('models/model_fight.pth', map_location=torch.device('cpu')))
-    fight_model.eval()
-
-    torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    fight_model.to(torch_device)
-    '''
-    
-    return accident_model, fire_model, # fight_model, torch_device
+    # Retornamos solo los dos modelos
+    return accident_model, fire_model
 
 try:
-    accident_model, fire_model, fight_model, torch_device = load_models()
+    accident_model, fire_model = load_models()
 except Exception as e:
     st.error(f"Error al cargar los modelos: {e}")
     st.stop()
@@ -193,7 +167,7 @@ def draw_overlays(frame, accident_prob, fight_prob, fire_prob):
     return frame
 
 def process_frame(frame, state):
-    # Preprocesamiento de cada modelo
+    # Preprocesamiento para cada modelo
     resized_accident = cv2.resize(frame, (ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE), interpolation=cv2.INTER_AREA)
     processed_accident = np.float32(resized_accident) / 255.0
     
@@ -203,7 +177,7 @@ def process_frame(frame, state):
     resized_fire = cv2.resize(frame, (FIRE_IMG_SIZE, FIRE_IMG_SIZE), interpolation=cv2.INTER_AREA)
     processed_fire = np.float32(resized_fire) / 255.0
 
-    # Inicialización y actualización de buffers
+    # Manejo de buffers en st.session_state
     if 'accident_buffer' not in state:
         state['accident_buffer'] = []
     if 'fight_buffer' not in state:
@@ -223,24 +197,18 @@ def process_frame(frame, state):
     accident_seq = (state['accident_buffer'] + [processed_accident] * SEQUENCE_LENGTH)[:SEQUENCE_LENGTH]
     fight_seq = (state['fight_buffer'] + [processed_fight] * SEQUENCE_LENGTH)[:SEQUENCE_LENGTH]
     
-    # Preparación de tensores para cada modelo
+    # Preparar tensores para el modelo de accidentes
     accident_input = tf.convert_to_tensor(np.expand_dims(np.array(accident_seq), axis=0))
+    # Para el modelo de peleas, dado que no lo usamos, podemos omitir la conversión
+    # o asignar un valor predeterminado
+    fight_prob = 0.0  # Valor fijo, ya que no usamos el modelo de peleas
     
-    fight_input = np.array(fight_seq)
-    fight_input = np.transpose(fight_input, (0, 3, 1, 2))
-    fight_input = np.expand_dims(fight_input, axis=0)
-    fight_input = np.transpose(fight_input, (0, 2, 1, 3, 4))
-    fight_input = torch.tensor(fight_input, dtype=torch.float32).to(torch_device)
-    
+    # Preparar tensores para el modelo de incendios
     fire_input = tf.convert_to_tensor(np.expand_dims(processed_fire, axis=0))
     
-    # Realización de predicciones
+    # Realización de predicciones con TensorFlow
     accident_pred = predict_batch(accident_model, accident_input)
     accident_prob = float(accident_pred[0][0])
-    
-    with torch.no_grad():
-        fight_output = fight_model(fight_input)
-        fight_prob = torch.sigmoid(fight_output).item()
     
     fire_pred = fire_model(fire_input, training=False)
     fire_prob = float(fire_pred[0][1])
