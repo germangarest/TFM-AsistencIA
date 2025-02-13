@@ -1,8 +1,9 @@
-streamlit==1.25.0
-opencv-python==4.11.0.86
-numpy==1.23.5
-pandas==2.2.3
-tensorflow==2.12.0
-torch==2.6.0
-torchvision==0.21.0
-scikit-image==0.24.0
+streamlit
+opencv-python
+numpy
+pandas
+tensorflow
+torch
+torchvision
+scikit-image
+setuptools
