@@ -99,10 +99,6 @@ class FixedInputLayer(_InputLayer):
         # Agregar el atributo que falta para evitar el error
         self._self_tracked_trackables = {}
 
-# Registrar TimeDistributed para que Keras la reconozca al cargar el modelo
-from tensorflow.keras.layers import TimeDistributed
-tf.keras.utils.get_custom_objects()['TimeDistributed'] = TimeDistributed
-
 # Registrar BatchNormalization para la deserialización
 from tensorflow.keras.layers import BatchNormalization
 tf.keras.utils.get_custom_objects()['BatchNormalization'] = BatchNormalization
@@ -120,7 +116,7 @@ custom_objects = {
     'InputLayer': FixedInputLayer,
     'BatchNormalization': CustomBatchNormalization,
     'BatchNormalizationV2': CustomBatchNormalization,  # Por si el modelo lo requiere
-    'TimeDistributed': TimeDistributed        
+    'TimeDistributed': FixedTimeDistributed     
 }
 tf.keras.utils.get_custom_objects().update(custom_objects)
 
