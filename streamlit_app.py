@@ -10,19 +10,6 @@ import gc
 import torch
 import torch.nn as nn
 
-tf.keras.utils.get_custom_objects()['Sequential'] = tf.keras.models.Sequential
-from tensorflow.keras.layers import TimeDistributed as OriginalTimeDistributed
-
-# Definir la subclase personalizada de TimeDistributed
-class FixedTimeDistributed(OriginalTimeDistributed):
-    def __init__(self, *args, **kwargs):
-        super(FixedTimeDistributed, self).__init__(*args, **kwargs)
-        # Inicializar el atributo requerido
-        self._self_tracked_trackables = {}
-
-# Registrar la versión "arreglada" en los objetos personalizados de Keras
-tf.keras.utils.get_custom_objects()['TimeDistributed'] = FixedTimeDistributed
-
 # ====================== CONSTANTES ======================
 ACCIDENT_IMG_SIZE = 160   # Tamaño para modelo de accidentes
 FIGHT_IMG_SIZE = 64       # Tamaño para modelo de peleas
@@ -75,51 +62,20 @@ if gpus:
     except RuntimeError as e:
         print(e)
 
-from tensorflow.keras.layers import BatchNormalization as OriginalBatchNormalization
-
-@tf.keras.utils.register_keras_serializable()
-class CustomBatchNormalization(OriginalBatchNormalization):
-    pass
-
-try:
-    from tensorflow.python.keras.engine.functional import Functional
-    tf.keras.utils.get_custom_objects()['Functional'] = Functional
-except ImportError:
-    # Si no se encuentra, puede que estés usando una versión en la que no es necesario
-    pass
-
 # Versión "arreglada" de InputLayer para evitar conflictos
 from tensorflow.keras.layers import InputLayer as _InputLayer
 class FixedInputLayer(_InputLayer):
     def __init__(self, **kwargs):
-        # Si se especifica 'batch_shape', se transforma a 'batch_input_shape'
         if 'batch_shape' in kwargs:
             kwargs['batch_input_shape'] = kwargs.pop('batch_shape')
         super(FixedInputLayer, self).__init__(**kwargs)
-        # Agregar el atributo que falta para evitar el error
-        self._self_tracked_trackables = {}
-
-# Registrar BatchNormalization para la deserialización
-from tensorflow.keras.layers import BatchNormalization
-tf.keras.utils.get_custom_objects()['BatchNormalization'] = BatchNormalization
 
 # Optimización XLA para TensorFlow
 tf.config.optimizer.set_jit(True)
 tf.config.threading.set_inter_op_parallelism_threads(1)
 tf.config.threading.set_intra_op_parallelism_threads(1)
 
-from tensorflow.keras.layers import BatchNormalization, TimeDistributed
-
-# Registrar globalmente los objetos personalizados
-custom_objects = {
-    'DTypePolicy': tf.keras.mixed_precision.Policy,
-    'InputLayer': FixedInputLayer,
-    'BatchNormalization': CustomBatchNormalization,
-    'BatchNormalizationV2': CustomBatchNormalization,  # Por si el modelo lo requiere
-    'TimeDistributed': FixedTimeDistributed     
-}
-tf.keras.utils.get_custom_objects().update(custom_objects)
-
+# ====================== CARGA DE MODELOS ======================
 @st.cache_resource(show_spinner=False)
 def load_models():
     """
@@ -128,18 +84,25 @@ def load_models():
     """
     with tf.device('/GPU:0' if gpus else '/CPU:0'):
         # --- Modelo de Accidentes (TensorFlow) ---
-        accident_model = tf.keras.models.load_model('models/model_car.h5', compile=False, custom_objects=custom_objects)
+        accident_model = tf.keras.models.load_model('models/model_car.h5', compile=False)
         accident_model.compile(jit_compile=True)
+        # Realizar una inferencia dummy para inicializar
         dummy_accident = tf.zeros((1, SEQUENCE_LENGTH, ACCIDENT_IMG_SIZE, ACCIDENT_IMG_SIZE, 3))
         accident_model(dummy_accident)
         
-    # --- Modelo de Incendios (TensorFlow) ---
-    fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False, custom_objects=custom_objects )
-    fire_model.compile(jit_compile=True)
-    dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
-    _ = fire_model(dummy_fire)
+        # --- Modelo de Incendios (TensorFlow) ---
+        custom_objects = {
+            'DTypePolicy': tf.keras.mixed_precision.Policy,
+            'InputLayer': FixedInputLayer
+        }
+        with tf.keras.utils.custom_object_scope(custom_objects):
+            fire_model = tf.keras.models.load_model('models/model_fire.h5', compile=False)
+        dummy_fire = tf.zeros((1, FIRE_IMG_SIZE, FIRE_IMG_SIZE, 3))
+        _ = fire_model(dummy_fire)
+        fire_model.compile(jit_compile=True)
     
     # --- Modelo de Peleas (PyTorch) ---
+    # Definición de la arquitectura utilizada
     class SimpleVideoClassifier(nn.Module):
         def __init__(self, num_classes=1):
             super(SimpleVideoClassifier, self).__init__()
@@ -148,6 +111,7 @@ def load_models():
             self.fc = nn.Linear(512, num_classes)
         
         def forward(self, x):
+            # Se espera entrada de forma (B, 3, T, H, W)
             B, C, T, H, W = x.shape
             x = x.permute(0, 2, 1, 3, 4).contiguous().view(B * T, C, H, W)
             features = self.resnet(x)
@@ -157,9 +121,11 @@ def load_models():
             return out
 
     fight_model = SimpleVideoClassifier()
+    # Cargar pesos del modelo (en CPU)
     fight_model.load_state_dict(torch.load('models/model_fight.pth', map_location=torch.device('cpu')))
     fight_model.eval()
 
+    # Mover el modelo al dispositivo adecuado (GPU si está disponible)
     torch_device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     fight_model.to(torch_device)
     
