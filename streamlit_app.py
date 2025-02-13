@@ -327,6 +327,18 @@ if active_tab == "Webcam":
         st.session_state["fire_predictions"] = []
     
         cap = cv2.VideoCapture(0)
+        if not cap.isOpened():
+            st.error("La webcam no está disponible. Esta función no se puede usar en Streamlit Cloud.")
+            st.session_state["run"] = False
+        else:
+            # Aquí sigue el bucle while para procesar la cámara
+            while st.session_state["run"]:
+                frame_start = time.time()
+                ret, frame = cap.read()
+                if not ret:
+                    st.error("Error al acceder a la webcam")
+                    break
+
         cap.set(cv2.CAP_PROP_FRAME_WIDTH, 640)
         cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 480)
         cap.set(cv2.CAP_PROP_FPS, DISPLAY_FPS)
