@@ -11,6 +11,17 @@ import torch
 import torch.nn as nn
 
 tf.keras.utils.get_custom_objects()['Sequential'] = tf.keras.models.Sequential
+from tensorflow.keras.layers import TimeDistributed as OriginalTimeDistributed
+
+# Definir la subclase personalizada de TimeDistributed
+class FixedTimeDistributed(OriginalTimeDistributed):
+    def __init__(self, *args, **kwargs):
+        super(FixedTimeDistributed, self).__init__(*args, **kwargs)
+        # Inicializar el atributo requerido
+        self._self_tracked_trackables = {}
+
+# Registrar la versión "arreglada" en los objetos personalizados de Keras
+tf.keras.utils.get_custom_objects()['TimeDistributed'] = FixedTimeDistributed
 
 # ====================== CONSTANTES ======================
 ACCIDENT_IMG_SIZE = 160   # Tamaño para modelo de accidentes
