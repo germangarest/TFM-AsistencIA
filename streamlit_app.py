@@ -10,6 +10,8 @@ import gc
 import torch
 import torch.nn as nn
 
+tf.keras.utils.get_custom_objects()['Sequential'] = tf.keras.models.Sequential
+
 # ====================== CONSTANTES ======================
 ACCIDENT_IMG_SIZE = 160   # Tamaño para modelo de accidentes
 FIGHT_IMG_SIZE = 64       # Tamaño para modelo de peleas
