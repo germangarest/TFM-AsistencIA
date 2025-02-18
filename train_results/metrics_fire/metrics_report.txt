@@ -1,4 +1,0 @@
-Precisión (accuracy): 0.9634 
-Pérdida (loss): 0.1050
-Pérdida de prueba (Test loss): 0.1766243427991867
-Precisión de prueba (Test accuracy): 0.9264705777168274
