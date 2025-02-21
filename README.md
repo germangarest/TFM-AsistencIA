@@ -47,6 +47,7 @@ https://universe.roboflow.com/alexander-genza/v_d-jikoi
 
 ### INCENDIOS:
 https://universe.roboflow.com/data-annotation-library/dectect_fire
+
 ---
 
 ## 3. Descripción de los datos
