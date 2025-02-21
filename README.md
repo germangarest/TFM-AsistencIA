@@ -40,13 +40,13 @@ Además, se incorporan funcionalidades adicionales para mejorar la respuesta y f
 ## 2. Obtención de datos
 
 ### ACCIDENTES DE COCHE:
-
+https://universe.roboflow.com/ambulance-0rcqn/accident_detection-trmhu/dataset/4
 
 ### PELEAS:
-
+https://universe.roboflow.com/alexander-genza/v_d-jikoi
 
 ### INCENDIOS:
-
+https://universe.roboflow.com/data-annotation-library/dectect_fire
 ---
 
 ## 3. Descripción de los datos
