@@ -16,8 +16,6 @@ _AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la
 
 <img src="img/logo.png" alt="AsistencIA" width="400"/>
 
----
-
 ### 👥 Integrantes del equipo
 
 | [![Germán García Estévez](https://github.com/germangarest.png?size=100)](https://github.com/germangarest) | [![David Moreno Cerezo](https://github.com/DavidMoCe.png?size=100)](https://github.com/DavidMoCe) |
