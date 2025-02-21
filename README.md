@@ -12,7 +12,7 @@
 ---
 
 ## 1. Justificación y descripción del proyecto
-_AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la detección temprana de tres tipos de emergencias mediante análisis de video: accidentes de coche, incendios y peleas. La idea principal es utilizar cámaras de la vía pública para alertar de forma inmediata a servicios de emergencia (bomberos, ambulancias y policía) y, a la vez, ofrecer herramientas de capacitación ciudadana y asistencia en tiempo real
+_AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la detección temprana de tres tipos de emergencias mediante análisis de video: accidentes de coche, incendios y peleas. La idea principal es utilizar cámaras de la vía pública para alertar de forma inmediata a servicios de emergencia (bomberos, ambulancias y policía) y, a la vez, ofrecer herramientas de capacitación ciudadana y asistencia en tiempo real.
 
 <img src="img/logo.png" alt="AsistencIA" width="400"/>
 
@@ -20,30 +20,6 @@ El proyecto _AsistencIA_ tiene como objetivo desarrollar un sistema integral que
 
 - **Accidentes de coche**  
 - **Incendios**  
-Para la deteccion de incendios/fuegos, hemos usado un modelo de deep learning que implementa una CNN (Red Neuronal Convolucional) para captar fuego en imágenes, con un rendimiento del 95% de precisión. El modelo se entrena con un dataset obtenido de Kaggle con unas 2.000 imágenes, con una distribución al 50% de fuego/no fuego. Algunos aspectos claves del modelo son:
-
-### Dataset y preprocesamiento:
-- Todas las imágenes redimensionadas a 128x128 píxeles.
-- Data Augmentation para ampliar el dataset (rotaciones, zoom, volteos).
-
-### Arquitectura CNN:
-- Capas convolucionales con ReLU y MaxPooling.
-- BatchNormalization y Dropout (0.5) para evitar sobreajuste.
-- Capas densas finales con softmax para clasificación binaria.
-
-### Entrenamiento y rendimiento:
-- 20 épocas, lotes de 8 imágenes, optimizador Adam.
-- Precisión final ~95% en pruebas.
-- Buena generalización sin sobreajuste significativo.
-- Early Stopping y checkpoints para optimizar el entrenamiento.
-
-### Evaluación:
-- Matriz de confusión muestra pocos falsos positivos/negativos.
-- Pérdida decreciente y estable.
-- Incluye función para probar con imágenes aleatorias.
-
-El modelo demuestra ser robusto y fiable para la detección de fuego, siendo adecuado para aplicaciones prácticas.
-
 - **Peleas**
 
 Además, se incorporan funcionalidades adicionales para mejorar la respuesta y formación de los ciudadanos ante situaciones de emergencia:
@@ -54,18 +30,12 @@ Además, se incorporan funcionalidades adicionales para mejorar la respuesta y f
 ---
 
 ## 2. Obtención de datos
-## ACCIDENTES DE COCHE Y PELEAS:
-En cuanto al tema de los datos, hubo bastantes problemas con los modelos de accidentes de coche y peleas. Primero, comenzamos probando un dataset de imágenes, las cuales habían sido extraídas de los videos respectivos, el cual era de [Kaggle](https://www.kaggle.com/datasets/odins0n/ucf-crime-dataset). Este dataset contenía datos de muchas situaciones anómalas, entre ellas se incluían "RoadAccidents" y "Fighting", lo que buscábamos. Entrenamos el modelo y daba una alta precisión, pero al probarlo en la aplicación web de Streamlit con otros videos, daba precisiones del 100% en cualquier parte del video, incluso si no se veía un accidente ni una pelea, por lo que después de muchos intentos de optimizaciones, pasamos a entrenar el modelo con el mismo dataset pero directamente con los videos, el cual estaba en la página oficial [University of Central Florida](https://www.crcv.ucf.edu/projects/real-world/).
 
-Una vez más, el modelo no respondía bien, aunque esta vez directamente daba una precisión bajísima, por lo que el dataset era inútil. Finalmente, nos dimos cuenta de que el problema era que los videos de peleas (o accidentes) eran de varios minutos en los que no solo se mostraba el incidente, sino que el incidente duraba 5 o 10 segundos y el resto era una situación normal, por lo que el modelo no sabía diferenciar qué era una situación anómala.
+### ACCIDENTES DE COCHE:
 
-Después de todos estos problemas, finalmente, nos dimos cuenta de que la mejor manera para entrenar un modelo de estas características era coger clips cortos donde solo se muestre el incidente, y que el modelo aprenda las características y parámetros para la predicción.
 
-### DATASET USADO ACCIDENTES DE COCHE:
-Finalmente, para el modelo de accidentes de coche usamos el [CarCrashDataset en Github](https://github.com/Cogito2012/CarCrashDataset). Estos clips han sido obtenidos de grabaciones de cámaras en el salpicadero de coches (dashcam). El dataset incluye diferentes situaciones medioambientales para una mejor variabilidad.
+### PELEAS:
 
-### DATASET USADO PELEAS:
-Para el modelo de peleas, usamos el [RWF-2000 de Hugging Face](https://huggingface.co/datasets/DanJoshua/RWF-2000). Estos videos han sido sacados de cámaras de vigilancia.
 
 ## INCENDIOS:
 
@@ -75,30 +45,10 @@ Para el modelo de peleas, usamos el [RWF-2000 de Hugging Face](https://huggingfa
 Se debe dar una descripción completa de los datos indicando qué significa cada uno de los atributos.
 
 ### ACCIDENTES DE COCHE:
-El dataset se divide en dos carpetas:
-* **Normal_Videos_for_Event_Recognition**: videos sin accidentes de coche.
-* **CrashAccidents**: videos de accidentes de coche.
 
-Atributos de los videos (metadatos):
-* **Resolución (ancho y alto)**: 1280×720 px  
-* **Frames por segundo (fps)**: 10 fps  
-* **Número de frames**: 50 frames  
-* **Duración**: 5 segundos  
-* **Tamaño del archivo**: varía de 0.5 MB a 8 MB  
-* **Formato de video**: .mp4  
 
 ### PELEAS:
-El dataset se divide en dos carpetas:
-* **NonFight**: videos sin peleas.
-* **Fight**: videos de peleas.
 
-Atributos de los videos (metadatos):
-* **Resolución (ancho y alto)**: 640×360 px  
-* **Frames por segundo (fps)**:  
-* **Número de frames**:  
-* **Duración**: de 5 a 10 segundos  
-* **Tamaño del archivo**:  
-* **Formato de video**: .avi  
 
 ### INCENDIOS:
 
