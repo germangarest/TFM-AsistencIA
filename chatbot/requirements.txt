@@ -1,0 +1,10 @@
+streamlit==1.42.1
+python-dotenv==1.0.1
+llama-index==0.12.19
+llama-index-embeddings-deepinfra==0.3.0
+llama-index-llms-deepinfra==0.3.0
+deepinfra==0.1.0
+llama-index-core==0.12.19
+pypdf==5.3.0
+requests==2.32.3
+numpy==2.2.3
