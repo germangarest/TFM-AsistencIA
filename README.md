@@ -37,7 +37,7 @@ Además, se incorporan funcionalidades adicionales para mejorar la respuesta y f
 ### PELEAS:
 
 
-## INCENDIOS:
+### INCENDIOS:
 
 ---
 
