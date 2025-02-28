@@ -1,0 +1,483 @@
+/* styles.css - Estilos optimizados para consistencia entre modos */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variables globales con tema oscuro forzado para ambos modos */
+:root {
+  /* Colores de la interfaz - Modo oscuro para todos */
+  --primary: #e63946;
+  --primary-hover: #d32f3a;
+  --secondary: #457b9d;
+  --secondary-hover: #3a6a89;
+  --sidebar-bg: #1d3557;
+  --sidebar-text: #ffffff;
+  --bg-main: #121212;         /* Fondo principal negro */
+  --bg-card: #1e1e1e;         /* Elementos sobre el fondo */
+  --bg-container: #2a2a2a;    /* Contenedores */
+  --text-primary: #f0f0f0;    /* Texto principal blanco */
+  --text-secondary: #cccccc;  /* Texto secundario gris claro */
+  --border-color: #444444;    /* Bordes oscuros */
+  --accent-red: #ff6b6b;      /* Acentos más brillantes para contrastar */
+  --accent-green: #4cc16f;
+  --accent-blue: #6ea8d9;
+  --header-gradient: linear-gradient(135deg, #e63946 0%, #457b9d 100%);
+  
+  /* Sombras */
+  --shadow-sm: 0 2px 4px rgba(0,0,0,0.3);
+  --shadow: 0 4px 8px rgba(0,0,0,0.3);
+  --radius: 8px;
+}
+
+/* Forzar mismo estilo en modo claro */
+[data-theme="light"] {
+  --primary: #e63946;
+  --primary-hover: #d32f3a;
+  --secondary: #457b9d;
+  --secondary-hover: #3a6a89;
+  --sidebar-bg: #1d3557;
+  --sidebar-text: #ffffff;
+  --bg-main: #121212;
+  --bg-card: #1e1e1e;
+  --bg-container: #2a2a2a;
+  --text-primary: #f0f0f0;
+  --text-secondary: #cccccc;
+  --border-color: #444444;
+  --accent-red: #ff6b6b;
+  --accent-green: #4cc16f;
+  --accent-blue: #6ea8d9;
+  --header-gradient: linear-gradient(135deg, #e63946 0%, #457b9d 100%);
+}
+
+/* Forzar también para prefers-color-scheme */
+@media (prefers-color-scheme: light) {
+  :root {
+    /* Mismas variables que arriba para consistencia */
+    --primary: #e63946;
+    --primary-hover: #d32f3a;
+    --secondary: #457b9d;
+    --secondary-hover: #3a6a89;
+    --sidebar-bg: #1d3557;
+    --sidebar-text: #ffffff;
+    --bg-main: #121212;
+    --bg-card: #1e1e1e;
+    --bg-container: #2a2a2a;
+    --text-primary: #f0f0f0;
+    --text-secondary: #cccccc;
+    --border-color: #444444;
+    --accent-red: #ff6b6b;
+    --accent-green: #4cc16f;
+    --accent-blue: #6ea8d9;
+    --header-gradient: linear-gradient(135deg, #e63946 0%, #457b9d 100%);
+  }
+}
+
+/* MEJORAS PARA BOTONES DE NAVEGACIÓN */
+/* Estilos personalizados para botones primarios/activos */
+.stButton > button[data-baseweb="button"][kind="primary"] {
+  background-color: var(--secondary) !important;
+  color: white !important;
+  border-left: 4px solid var(--primary) !important;
+  box-shadow: 0 4px 6px rgba(0,0,0,0.2) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.stButton > button[data-baseweb="button"][kind="primary"]:hover {
+  background-color: var(--secondary-hover) !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Estilos personalizados para botones secundarios/inactivos */
+.stButton > button[data-baseweb="button"][kind="secondary"] {
+  background-color: var(--bg-card) !important;
+  color: var(--text-primary) !important;
+  border: 1px solid var(--border-color) !important;
+  transition: all 0.2s ease-in-out !important;
+}
+
+.stButton > button[data-baseweb="button"][kind="secondary"]:hover {
+  background-color: #2a2a2a !important;
+  color: white !important;
+  transform: translateY(-2px) !important;
+}
+
+/* Estilos generales */
+body {
+  font-family: 'Inter', sans-serif;
+  color: var(--text-primary);
+  background-color: var(--bg-main);
+  line-height: 1.6;
+}
+
+/* Ajustes para el contenedor principal */
+.main .block-container {
+  padding-top: 1.5rem;
+  max-width: 1200px;
+  background-color: var(--bg-main);
+}
+
+/* Forzar fondo oscuro en elementos principales */
+.main, [data-testid="stAppViewContainer"], [data-testid="stApp"] {
+  background-color: var(--bg-main) !important;
+}
+
+[data-testid="stHeader"] {
+  background-color: var(--bg-main) !important;
+}
+
+/* Estilos básicos de texto */
+h1, h2, h3, h4, h5, h6 {
+  color: var(--text-primary);
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+p, li, span {
+  color: var(--text-primary);
+}
+
+a {
+  color: var(--secondary);
+  text-decoration: none;
+}
+
+/* Estilos para la barra lateral */
+[data-testid="stSidebar"] {
+  background-color: var(--sidebar-bg) !important;
+}
+
+[data-testid="stSidebar"] > div:first-child {
+  background-color: var(--sidebar-bg) !important;
+}
+
+[data-testid="stSidebar"] h1, 
+[data-testid="stSidebar"] h2, 
+[data-testid="stSidebar"] h3, 
+[data-testid="stSidebar"] p, 
+[data-testid="stSidebar"] span,
+[data-testid="stSidebar"] label,
+[data-testid="stSidebar"] [data-testid="stMarkdownContainer"] {
+  color: var(--sidebar-text) !important;
+}
+
+/* Botones */
+.stButton > button {
+  background-color: var(--primary);
+  color: white;
+  border: none;
+  border-radius: var(--radius);
+  padding: 0.5rem 1rem;
+  font-weight: 500;
+}
+
+.stButton > button:hover {
+  background-color: var(--secondary);
+  box-shadow: var(--shadow);
+}
+
+/* Header box con gradiente */
+.header-box {
+  background: var(--header-gradient);
+  color: white;
+  padding: 1.25rem;
+  border-radius: var(--radius);
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+}
+
+.header-box p {
+  color: white !important;
+  font-size: 1.05rem;
+  margin: 0;
+}
+
+/* Tabs mejorados */
+[data-baseweb="tab-list"] {
+  background-color: var(--bg-container);
+  border-radius: var(--radius) var(--radius) 0 0;
+}
+
+.stTabs [data-baseweb="tab"] {
+  background-color: transparent;
+  color: var(--text-primary);
+  font-weight: 500;
+  padding: 0.75rem 1.25rem;
+}
+
+.stTabs [data-baseweb="tab"][aria-selected="true"] {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.stTabs [data-baseweb="tab-panel"] {
+  background-color: var(--bg-card);
+  padding: 1.25rem;
+  border-radius: 0 0 var(--radius) var(--radius);
+  border: 1px solid var(--border-color);
+  border-top: none;
+}
+
+/* Cards/Contenedores para incidentes y consejos */
+.bordered-container {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1rem;
+}
+
+/* Tarjetas para incidentes detectables */
+.incident-card {
+  background-color: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.75rem;
+  box-shadow: var(--shadow-sm);
+}
+
+.incident-card.accident {
+  border-left: 4px solid var(--accent-red);
+}
+
+.incident-card.fight {
+  border-left: 4px solid var(--accent-green);
+}
+
+.incident-card.fire {
+  border-left: 4px solid var(--accent-blue);
+}
+
+/* Elementos de chat */
+[data-testid="stChatMessage"] {
+  background-color: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 0.5rem;
+  box-shadow: var(--shadow-sm);
+}
+
+[data-testid="stChatMessage"] [data-testid="stChatMessageContent"] {
+  color: var(--text-primary);
+}
+
+/* Input de chat */
+[data-testid="stChatInput"] input {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+  padding: 0.75rem;
+}
+
+/* Alertas */
+[data-testid="stAlert"] {
+  background-color: var(--bg-card);
+  border-radius: var(--radius);
+  border-left-width: 4px;
+}
+
+/* Toggles */
+[data-testid="stToggle"] [data-testid="stWidgetLabel"] {
+  color: var(--text-primary);
+}
+
+/* Tablas */
+.stDataFrame {
+  background-color: var(--bg-card);
+}
+
+.stDataFrame thead tr th {
+  background-color: var(--secondary);
+  color: white;
+}
+
+.stDataFrame tbody tr:nth-child(odd) {
+  background-color: var(--bg-container);
+}
+
+.stDataFrame tbody tr td {
+  color: var(--text-primary);
+}
+
+/* Ajustes para expansores */
+[data-testid="stExpander"] {
+  background-color: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius);
+}
+
+[data-testid="stExpanderContent"] {
+  background-color: var(--bg-card);
+  color: var(--text-primary);
+}
+
+/* WebRTC (cámara) - Fondo negro y bordes negros */
+.webrtc-media-container video {
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  background-color: #121212 !important;
+}
+
+.webrtc-streamer .webrtc-container {
+  background-color: #121212 !important; 
+}
+
+[data-testid="root"] > div:first-child {
+  background-color: #121212 !important;
+}
+
+/* CORRECCIÓN: Quitar bordes blancos en la cámara */
+.stVideo, video, [data-testid="stVideo"], 
+.webrtc-streamer, .webrtc-streamer *,
+iframe, [data-testid="streamlitApp"], 
+[data-testid="streamlitApp"] iframe {
+  background-color: #121212 !important;
+  border: none !important;
+}
+
+/* Ajuste para el botón STOP en la webcam */
+button[title="Stop"],
+button[title="Stop"] span {
+  background-color: #333333 !important;
+  color: #f0f0f0 !important;
+  border: 1px solid #444444 !important;
+}
+
+/* Arreglar color de texto en los selectores */
+[data-baseweb="select"] [data-testid="stMarkdownContainer"] p {
+  color: var(--text-primary) !important;
+}
+
+/* Arreglar color de texto en spinners */
+[data-testid="stSpinner"] p {
+  color: var(--text-primary) !important;
+}
+
+/* Tarjeta de cámara inactiva */
+.camera-placeholder {
+  background-color: var(--bg-card);
+  padding: 2rem;
+  border-radius: var(--radius);
+  text-align: center;
+  border: 1px dashed var(--border-color);
+}
+
+/* Mejorar file uploader para mejor legibilidad */
+[data-testid="stFileUploader"] {
+  background-color: var(--bg-card) !important;
+  border-radius: var(--radius);
+  padding: 1rem;
+  border: 1px dashed var(--border-color);
+  color: var(--text-primary) !important;
+}
+
+/* CORRECCIÓN: Estilo para textos dentro del file uploader */
+[data-testid="stFileUploader"] * {
+  color: var(--text-primary) !important;
+}
+
+/* Específicamente para el límite y formatos de archivo */
+[data-testid="stFileUploaderDropzone"] div,
+[data-testid="stFileUploaderDropzone"] p,
+[data-testid="stFileUploaderDropzone"] span {
+  color: var(--text-primary) !important;
+}
+
+/* El texto "Limit 200MB per file • MP4, AVI, MOV, MKV" */
+[data-testid="stFileUploaderDropzone"] div.upload-text {
+  color: #cccccc !important; 
+  opacity: 1 !important;
+}
+
+/* Arreglar colores del botón Browse files */
+[data-testid="stFileUploader"] button {
+  background-color: #444444 !important;
+  color: white !important;
+  border: none !important;
+}
+
+/* Forzar color claro en todos los textos del uploader */
+.uploadLabel,
+.upload-text, 
+.upload-text span {
+  color: var(--text-primary) !important;
+}
+
+/* CORRECCIÓN: Configurar elemento de menú de settings */
+[data-baseweb="menu"] ul {
+  background-color: #222222 !important;
+}
+
+[data-baseweb="menu"] ul li,
+[data-baseweb="menu"] ul li div,
+[data-baseweb="menu"] ul li span {
+  color: var(--text-primary) !important;
+}
+
+[data-baseweb="menu"] ul li:hover {
+  background-color: #333333 !important;
+}
+
+/* Específicamente para opciones del menú como Rerun, Settings, etc. */
+[role="menuitem"] div {
+  color: var(--text-primary) !important;
+}
+
+/* Textos en settings y menús */
+[role="menu"],
+[role="menu"] *,
+[role="menuitem"],
+[role="menuitem"] * {
+  background-color: #222222 !important;
+  color: white !important;
+}
+
+/* Ajuste para las opciones de setting */
+.settings-container {
+  background-color: var(--bg-card) !important;
+}
+
+.settings-container * {
+  color: var(--text-primary) !important;
+}
+
+/* Corregir textos en streamlit widgets básicos */
+.stCheckbox label span, 
+.stRadio label span,
+.stSelectbox label span,
+.stSlider label span,
+.stTextInput label span,
+.stTextArea label span,
+.stNumberInput label span,
+.stDateInput label span {
+  color: var(--text-primary) !important;
+}
+
+/* Mejorar contraste en widgets */
+[data-testid="baseButton-secondary"] {
+  border-color: var(--secondary) !important;
+  color: var(--secondary) !important;
+}
+
+.stProgress > div > div {
+  background-color: var(--secondary);
+}
+
+/* Ajustes adicionales para la cámara web */
+.stVideo, video, [data-testid="stVideo"] {
+  background-color: #121212 !important;
+}
+
+.streamlit-container {
+  background-color: var(--bg-main) !important;
+}
+
+/* Arreglos para modo responsivo */
+@media (max-width: 768px) {
+  .main .block-container {
+    padding: 1rem;
+  }
+  
+  .stTabs [data-baseweb="tab"] {
+    padding: 0.5rem 0.75rem;
+    font-size: 0.9rem;
+  }
+}
