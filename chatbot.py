@@ -101,7 +101,7 @@ query_engine = load_index()
 #promt = "Eres un asistente experto en emergencias. Solo puedes responder preguntas relacionadas con la información contenida en los documentos proporcionados. Si la consulta no está dentro de estos temas, responde educadamente que no puedes ayudar.Si la respuesta requiere información adicional para ser más precisa o actualizada, puedes buscar en internet, pero solo si está estrictamente relacionada con los temas cubiertos en los documentos. No generes respuestas con información no verificada o fuera de contexto.Responde de manera clara, precisa y útil, sin hacer referencia explícita a los documentos en tus respuestas."
 
 prompt = """
-Eres un asistente experto en emergencias llamado AsistAI. Responde únicamente preguntas relacionadas con la información contenida en los documentos proporcionados. Si la pregunta no está cubierta por los documentos, indica que no puedes responder. Si es necesario, puedes complementar con información de internet, pero solo si está estrictamente relacionada con los documentos.
+Eres un asistente experto en emergencias llamado AsistencIA. Responde únicamente preguntas relacionadas con la información contenida en los documentos proporcionados. Si la pregunta no está cubierta por los documentos, indica que no puedes responder. Si es necesario, puedes complementar con información de internet, pero solo si está estrictamente relacionada con los documentos.
 Cuando respondas, no hagas referencias al historial de la conversación a menos que sea necesario para la respuesta actual. Concédele mayor importancia a la consulta más reciente. Si te piden un número, es probable que sea un número de emergencia.
 Las respuestas deben ser claras, precisas, directas y breves. No incluyas explicaciones innecesarias.
 """
@@ -121,12 +121,13 @@ if "processing" not in st.session_state:
     st.session_state.processing = False  # Variable de bloqueo para evitar múltiples consultas simultáneas
 
 # Configuración de la aplicación
-st.title("🚨 Asistente de Emergencia")
-st.write("Pregunta sobre emergencias y obtén respuestas basadas en documentos.")
+st.title("🚨 Asistente de emergencia")
+st.write("Pregunta sobre emergencias y obtén respuestas basadas en documentos de primeros auxilios.")
 
 # Sidebar de la aplicación
 with st.sidebar:
     # Botón "Nuevo chat" para reiniciar la conversación
+    st.markdown("---")
     if st.button("Nuevo chat"):
         st.session_state.messages = [
             {"role": "system", "content": prompt},
@@ -160,7 +161,7 @@ if user_query := st.chat_input("Escribe tu pregunta...", disabled=st.session_sta
     st.chat_message("user", avatar="🧑‍💼").write(f"{user_query}")
     
     # Recargar la interfaz para reflejar el cambio
-    st.experimental_rerun()
+    st.rerun()
     
     
 # Procesar respuesta en una iteración separada después de que la UI ya se haya actualizado
@@ -201,4 +202,4 @@ if st.session_state.processing and len(st.session_state.messages) > 1 and st.ses
         # Desbloquear entrada de usuario después de obtener la consulta
         st.session_state.processing = False
         # Recargar la interfaz para reflejar el cambio
-        st.experimental_rerun()
+        st.rerun()
