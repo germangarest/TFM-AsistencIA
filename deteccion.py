@@ -14,6 +14,46 @@ import time
 from typing import Dict, List
 import psutil
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+
+# ===============================
+# Función para enviar un correo de alerta
+# ===============================
+# Función para enviar un correo de alerta
+def send_email_alert():
+    sender_email = "www.jaradavid@gmail.com"
+    receiver_email = "www.jaradavid@gmail.com"
+    password = "wlspfukvtrwdkuwf"
+
+    # Crear el mensaje con codificación UTF-8
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = '🚨 Alerta de Incendio'
+
+    # Cuerpo del mensaje
+    body = """\
+    ¡Atención! Se ha detectado fuego en la cámara. Revisa la ubicación inmediatamente.
+    """
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+    try:
+        # Conexión al servidor SMTP de Gmail
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()  # Iniciar la conexión segura
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        st.success("✅ Alerta de email enviada.")
+    except Exception as e:
+        st.error(f"⚠️ No se pudo enviar el email: {e}")
+
+# Para evitar múltiples alertas seguidas
+alert_sent = False
+
 # Global variable para el umbral de confianza
 CONF_THRESHOLD = 0.45
 
@@ -575,6 +615,11 @@ def main():
                         """, 
                         unsafe_allow_html=True
                     )
+                    
+                    # Enviar correo de alerta
+                    if not alert_sent:
+                        send_email_alert()  # Enviar email
+                        alert_sent = True  # Evitar alertas repetidas
                 
                 # Se ha eliminado la gráfica de barras
                 
@@ -582,6 +627,8 @@ def main():
                 st.info("No se detectaron incidentes en este video")
             
             st.markdown("</div></div>", unsafe_allow_html=True)
+    # Resetear el alert sent
+    alert_sent = False
     
     # Pestaña 3: Historial de incidentes
     with tab3:
