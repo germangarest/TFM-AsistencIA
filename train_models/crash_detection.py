@@ -1,9 +1,14 @@
 import os
+import torch
 from ultralytics import YOLO
 
 # ===============================
-# Eliminar archivos de cache existentes
+# Verificación de recursos y preparación
 # ===============================
+print(f"GPU disponible: {torch.cuda.get_device_name(0) if torch.cuda.is_available() else 'No'}")
+print(f"VRAM disponible: {torch.cuda.get_device_properties(0).total_memory/1e9:.2f}GB" if torch.cuda.is_available() else "N/A")
+
+# Limpieza de caché para evitar problemas de entrenamiento
 cache_paths = [
     os.path.join("data_car", "train", "labels.cache"),
     os.path.join("data_car", "valid", "labels.cache")
@@ -11,57 +16,82 @@ cache_paths = [
 for cache_file in cache_paths:
     if os.path.exists(cache_file):
         os.remove(cache_file)
-        print(f"Archivo de cache eliminado: {cache_file}")
+        print(f"Caché eliminado: {cache_file}")
 
 # ===============================
-# 1. Definir la ruta al archivo data.yaml
+# Configuración del entrenamiento
 # ===============================
 data_yaml_path = os.path.join("data_car", "data.yaml")
 data_yaml_path = os.path.abspath(data_yaml_path)
-print("Usando archivo data.yaml en:", data_yaml_path)
+print(f"Archivo de configuración: {data_yaml_path}")
+
+model = YOLO("yolov8s.pt")
+print("Modelo base cargado: YOLOv8s")
 
 # ===============================
-# 2. Cargar el modelo preentrenado de YOLOv8
+# Entrenamiento optimizado para accidentes
 # ===============================
-model = YOLO("yolov8n.pt")
-print("Modelo YOLO cargado correctamente.")
-
-# ===============================
-# 3. Entrenar el modelo con ajustes optimizados para GPU
-# ===============================
-model.train(
-    data=data_yaml_path,       # Ruta al archivo de configuración
-    epochs=150,                # Número de épocas
-    imgsz=640,                 # Resolución de entrada
-    batch=4,                   # Tamaño del lote
+results = model.train(
+    data=data_yaml_path,
+    epochs=150,                # Más épocas para mejor convergencia
+    imgsz=640,                 # Resolución estándar
+    batch=16,                  # Batch size optimizado
     project="car_detection",   # Carpeta de resultados
-    name="yolov8_car",         # Nombre del experimento
-    device=0,                  # Forzar el uso de GPU
-    half=True,                 # Entrena en fp16 para aprovechar la capacidad de la GPU
-    lr0=1e-4,                  # Tasa de aprendizaje inicial
-    momentum=0.9,              # Momentum del optimizador
-    weight_decay=0.0005,       # Factor de regularización
-    workers=8,                 # Número de workers para la carga de datos
-    augment=True,              # Habilitar augmentación de datos
-    verbose=True,              # Mostrar información detallada
-    save_period=10,            # Guardar un checkpoint cada 10 épocas
-    patience=10                 # Early stopping: detiene el entrenamiento si no hay mejora en 5 épocas consecutivas
+    name="yolov8s_car_optimizado",  
+    device=0,                  # GPU
+    half=True,                 # Usar FP16 para optimizar memoria
+    
+    # Optimizaciones para evitar overfitting
+    dropout=0.1,               # Dropout para regularización
+    weight_decay=0.0005,       # Regularización de pesos
+    
+    # Hiperparámetros optimizados
+    lr0=0.001,                 # Tasa de aprendizaje inicial más agresiva
+    lrf=0.01,                  # Factor de la tasa de aprendizaje final (para scheduler)
+    momentum=0.937,            # Momentum del optimizador
+    
+    # Augmentación de datos avanzada
+    augment=True,              # Habilitar augmentación
+    mosaic=1.0,                # Mosaico para diversidad
+    mixup=0.1,                 # Mixup para robustez
+    degrees=10.0,              # Rotación moderada
+    translate=0.2,             # Traslación
+    scale=0.2,                 # Escalado
+    fliplr=0.5,                # Volteo horizontal
+    perspective=0.0005,        # Perspectiva (menos para evitar distorsión)
+    
+    # Control de entrenamiento
+    patience=20,               # Paciencia para early stopping (en épocas)
+    save_period=25,            # Guardar modelo cada 25 épocas
+    close_mosaic=10,           # Desactivar mosaico en las últimas épocas
+    
+    # Optimizadores
+    cos_lr=True,               # Scheduler de tasa de aprendizaje cosenoidal
+    
+    # Evaluación
+    val=True,                  # Validar durante entrenamiento
+    
+    # Recursos
+    workers=8,                 # Trabajadores para carga de datos
+    cache=True,                # Cachear imágenes para acelerar entrenamiento
+    verbose=True               # Mostrar información detallada
 )
-print("Entrenamiento completado.")
+
+print("Entrenamiento completado. Métricas finales:")
+print(f"mAP50: {results.maps[0]:.4f}")
+print(f"mAP50-95: {results.maps[1]:.4f}")
 
 # ===============================
-# 4. Evaluar el modelo (opcional)
+# Guardar el modelo en el formato y ubicación correctos
 # ===============================
-metrics = model.val(data=data_yaml_path)
-print("Evaluación completada. Resultados:")
-print(metrics)
+os.makedirs("models", exist_ok=True)
+model.export(format="pytorch", imgsz=640)
 
-# ===============================
-# 5. Exportar el modelo a ONNX para optimización en CPU
-# ===============================
-try:
-    model.export(format="onnx", half=False, dynamic=False)
-    print("Exportación a ONNX completada. El archivo exportado estará optimizado para inferencia en CPU.")
-except Exception as e:
-    print("Ocurrió un error durante la exportación del modelo:")
-    print(e)
+# Copiar al directorio esperado por la aplicación
+import shutil
+best_pt = f"{model.trainer.save_dir}/weights/best.pt"
+final_path = "models/model_car.pt"
+shutil.copy(best_pt, final_path)
+print(f"Modelo guardado en: {final_path}")
+
+print("Proceso de entrenamiento completado con éxito.")
