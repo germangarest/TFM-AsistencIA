@@ -1,4 +1,3 @@
-# agent.py
 import streamlit as st
 import os
 from dotenv import load_dotenv
@@ -9,6 +8,9 @@ import litellm
 from youtube_transcript_api import YouTubeTranscriptApi
 import json
 import time
+from fpdf import FPDF
+import base64
+import uuid
 
 # Cargar variables de entorno
 load_dotenv()
@@ -16,6 +18,18 @@ DEEPINFRA_TOKEN = os.getenv("DEEPINFRA_TOKEN")
 
 # Configurar LiteLLM
 litellm.api_key = DEEPINFRA_TOKEN
+
+# Aplicar márgenes
+st.markdown("""
+<style>
+    .main .block-container {
+        padding-left: 2rem;
+        padding-right: 2rem;
+        max-width: 1250px;
+        margin: 0 auto;
+    }
+</style>
+""", unsafe_allow_html=True)
 
 def extract_video_id(youtube_url):
     """Extrae el ID del video de YouTube de la URL proporcionada."""
@@ -94,6 +108,24 @@ def is_first_aid_related(title):
     answer = response.choices[0].message.content.strip().upper()
     return "SÍ" in answer
 
+def clean_summary(text):
+    """Limpia el resumen de frases predefinidas no deseadas."""
+    # Patrones a eliminar
+    patterns = [
+        r"Resumen Detallado: Capacitación Ciudadana en Primeros Auxilios.*?\n",
+        r"Resumen Detallado:.*?\n",
+        r"Capacitación Ciudadana en Primeros Auxilios.*?\n"
+    ]
+    
+    # Aplicar cada patrón
+    for pattern in patterns:
+        text = re.sub(pattern, "", text, flags=re.IGNORECASE)
+    
+    # Eliminar líneas vacías al principio
+    text = re.sub(r"^\s*\n+", "", text)
+    
+    return text
+
 def generate_summary_streaming(title, transcript, text_placeholder, spinner_placeholder):
     """Genera un resumen del video con streaming de texto."""
     prompt = f"""
@@ -110,6 +142,9 @@ def generate_summary_streaming(title, transcript, text_placeholder, spinner_plac
     3. Destacar procedimientos importantes
     4. Explicar técnicas y pasos a seguir
     5. Mencionar precauciones y advertencias importantes
+    
+    IMPORTANTE: NO comiences el resumen con frases como "Resumen Detallado:" o "Capacitación Ciudadana en Primeros Auxilios". 
+    Comienza directamente con el contenido estructurado.
     """
     
     # Iniciar contenedor vacío para el texto
@@ -132,14 +167,112 @@ def generate_summary_streaming(title, transcript, text_placeholder, spinner_plac
                 if hasattr(chunk, 'choices') and chunk.choices and chunk.choices[0].delta.content:
                     content = chunk.choices[0].delta.content
                     full_response += content
+                    
+                    # Limpiar el resumen de frases no deseadas
+                    cleaned_response = clean_summary(full_response)
+                    
                     # Actualizar el texto visible con formato markdown
-                    text_placeholder.markdown(full_response)
+                    text_placeholder.markdown(cleaned_response)
                     time.sleep(0.01)  # Pequeña pausa para la visualización
     
-    return full_response
+    # Limpiar el resumen final
+    cleaned_response = clean_summary(full_response)
+    
+    # Activar la generación automática del quiz
+    st.session_state['summary_generated'] = True
+    st.session_state['video_summary'] = cleaned_response
+    
+    # Mensaje de éxito y guía para el usuario
+    success_message = st.success("✅ Resumen generado correctamente. Ahora puedes ir a las pestañas 'Quiz' o 'Chatbot' para continuar.")
+    time.sleep(3)
+    success_message.empty()
+    
+    return cleaned_response
 
-def generate_quiz(summary, quiz_placeholder):
-    """Genera un quiz basado en el resumen del video con spinner visible."""
+# Función para generar PDF del resumen
+def create_pdf(title, summary):
+    """Crea un archivo PDF con el resumen del video."""
+    pdf = FPDF()
+    pdf.add_page()
+    
+    # Configuración del título
+    pdf.set_font("Arial", "B", 16)
+    pdf.cell(0, 10, "Resumen de Primeros Auxilios", ln=True, align="C")
+    pdf.ln(5)
+    
+    # Título del video
+    pdf.set_font("Arial", "B", 12)
+    
+    # Dividir el título en múltiples líneas si es muy largo
+    max_chars_per_line = 80
+    title_words = title.split()
+    current_line = ""
+    
+    for word in title_words:
+        if len(current_line + " " + word) <= max_chars_per_line:
+            current_line += " " + word if current_line else word
+        else:
+            pdf.cell(0, 6, current_line.strip(), ln=True)
+            current_line = word
+    
+    # Agregar la última línea del título
+    if current_line:
+        pdf.cell(0, 6, current_line.strip(), ln=True)
+    
+    pdf.ln(5)
+    
+    # Fecha de generación
+    pdf.set_font("Arial", "I", 10)
+    current_date = time.strftime("%d/%m/%Y %H:%M:%S")
+    pdf.cell(0, 10, f"Generado el: {current_date}", ln=True)
+    pdf.ln(10)
+    
+    # Contenido del resumen
+    pdf.set_font("Arial", "", 11)
+    
+    # Dividir el texto en líneas para procesarlo párrafo por párrafo
+    lines = summary.split('\n')
+    
+    for line in lines:
+        if not line.strip():
+            pdf.ln(3)
+            continue
+            
+        # Detectar títulos (líneas que parecen encabezados)
+        if line.strip() and len(line.strip()) < 70 and not line.strip().endswith('.'):
+            pdf.set_font("Arial", "B", 12)
+            pdf.ln(5)
+            pdf.multi_cell(0, 10, line)
+            pdf.set_font("Arial", "", 11)
+        else:
+            # Divide líneas muy largas
+            pdf.multi_cell(0, 7, line)
+            pdf.ln(1)
+    
+    # Generar el archivo PDF en memoria
+    try:
+        pdf_output = pdf.output(dest="S").encode("latin1")
+        return pdf_output
+    except Exception as e:
+        print(f"Error al generar PDF: {str(e)}")
+        # Fallback en caso de error con caracteres especiales
+        pdf = FPDF()
+        pdf.add_page()
+        pdf.set_font("Arial", "B", 16)
+        pdf.cell(0, 10, "Resumen de Primeros Auxilios", ln=True, align="C")
+        pdf.set_font("Arial", "", 12)
+        pdf.multi_cell(0, 10, "Error al generar el PDF. Por favor, copie y pegue el resumen manualmente.")
+        return pdf.output(dest="S").encode("latin1")
+
+# Función para crear un enlace de descarga para el PDF
+def get_pdf_download_link(pdf_bytes, filename):
+    """Genera un enlace de descarga para el PDF."""
+    b64 = base64.b64encode(pdf_bytes).decode()
+    href = f'<a href="data:application/pdf;base64,{b64}" download="{filename}" class="download-button">📥 Descargar PDF</a>'
+    return href
+
+def generate_quiz(summary):
+    """Genera un quiz basado en el resumen del video."""
     prompt = f"""
     Basándote en el siguiente resumen de un video de primeros auxilios, crea un quiz de 5 preguntas de opción múltiple para evaluar conocimientos.
     
@@ -162,8 +295,8 @@ def generate_quiz(summary, quiz_placeholder):
     ]
     """
     
-    # Mostrar el spinner durante la generación
-    with st.spinner("Generando preguntas de evaluación..."):
+    # Usar spinner mientras se genera el quiz
+    with st.spinner("🔄 Generando preguntas de evaluación..."):
         response = litellm.completion(
             model="deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo",
             messages=[{"role": "user", "content": prompt}],
@@ -185,14 +318,30 @@ def generate_quiz(summary, quiz_placeholder):
         # Si hay error en el formato JSON, devolvemos el texto completo
         return quiz_text
 
+def handle_verify_answer(i, quiz_data):
+    """Maneja la verificación de respuesta sin recargar la página"""
+    question_id = f"q{i}"
+    verification_id = f"verification_{i}"
+    
+    if question_id in st.session_state:
+        selected_option = st.session_state[question_id]
+        selected_letter = selected_option[0]  # Toma la primera letra (a, b, c, d)
+        correct_letter = quiz_data[i]['respuesta_correcta']
+        
+        if selected_letter == correct_letter:
+            result = "✅ ¡Correcto! 🎉"
+        else:
+            result = f"❌ Incorrecto. La respuesta correcta es: {correct_letter}"
+        
+        # Guardar el resultado de la verificación
+        if 'verification_results' not in st.session_state:
+            st.session_state['verification_results'] = {}
+        
+        st.session_state['verification_results'][verification_id] = result
+
 def display_quiz(quiz_data):
-    """Muestra el quiz y maneja las respuestas del usuario de forma persistente."""
-    st.markdown('<div class="incident-card"><h3>📋 Quiz - Evalúa tus conocimientos</h3></div>', unsafe_allow_html=True)
-    
-    # Inicializar diccionarios de respuestas y resultados en session_state si no existen
-    if 'user_answers' not in st.session_state:
-        st.session_state['user_answers'] = {}
-    
+    """Muestra el quiz y maneja las respuestas del usuario sin recargas."""
+    # Inicializar diccionario de resultados en session_state si no existe
     if 'verification_results' not in st.session_state:
         st.session_state['verification_results'] = {}
     
@@ -203,54 +352,38 @@ def display_quiz(quiz_data):
             verification_id = f"verification_{i}"
             
             # Contenedor para la pregunta
-            st.markdown(f'<div class="bordered-container"><h4>Pregunta {i+1}</h4><p>{q["pregunta"]}</p></div>', unsafe_allow_html=True)
+            st.markdown(f'<div class="bordered-container" style="margin-bottom: 1.5rem;"><h4>Pregunta {i+1}</h4><p>{q["pregunta"]}</p></div>', unsafe_allow_html=True)
             
             # Opciones de respuesta
             options = [f"{opt_idx}. {opt}" for opt_idx, opt in zip(['a', 'b', 'c', 'd'], q['opciones'])]
             
-            # Si el usuario ya ha seleccionado una respuesta, usamos esa como valor por defecto
-            default_index = 0
-            if question_id in st.session_state['user_answers']:
-                selected_option = st.session_state['user_answers'][question_id]
-                if selected_option in options:
-                    default_index = options.index(selected_option)
-            
-            # Mostrar opciones de respuesta
-            selected_option = st.radio(
+            # Radio button con key específica
+            st.radio(
                 "Selecciona una respuesta:",
                 options,
-                index=default_index,
-                key=question_id
+                key=question_id,
+                label_visibility="visible"
             )
             
-            # Guardar la respuesta del usuario
-            st.session_state['user_answers'][question_id] = selected_option
+            # Botón de verificación usando session_state para evitar recargas
+            verify_btn_key = f"verify_btn_{i}"
             
-            # Botón de verificación
-            if st.button("Verificar respuesta", key=f"verify_{i}"):
-                selected_letter = selected_option.split('.')[0]
-                correct_letter = q['respuesta_correcta']
-                
-                if selected_letter == correct_letter:
-                    result = "✅ ¡Correcto! 🎉"
-                else:
-                    result = f"❌ Incorrecto. La respuesta correcta es: {correct_letter}"
-                
-                # Guardar el resultado de la verificación
-                st.session_state['verification_results'][verification_id] = result
+            # Maneja la verificación cuando se hace clic
+            if st.button("Verificar respuesta", key=verify_btn_key):
+                handle_verify_answer(i, quiz_data)
             
             # Mostrar resultado si existe
             if verification_id in st.session_state['verification_results']:
                 result = st.session_state['verification_results'][verification_id]
                 if "Correcto" in result:
-                    st.markdown(f'<div style="padding: 10px; background-color: rgba(76, 193, 111, 0.2); border-left: 4px solid var(--accent-green); border-radius: var(--radius);"><p>{result}</p></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="padding: 10px; background-color: rgba(76, 193, 111, 0.2); border-left: 4px solid var(--accent-green); border-radius: var(--radius); margin-bottom: 1rem;"><p>{result}</p></div>', unsafe_allow_html=True)
                 else:
-                    st.markdown(f'<div style="padding: 10px; background-color: rgba(255, 107, 107, 0.2); border-left: 4px solid var(--accent-red); border-radius: var(--radius);"><p>{result}</p></div>', unsafe_allow_html=True)
+                    st.markdown(f'<div style="padding: 10px; background-color: rgba(255, 107, 107, 0.2); border-left: 4px solid var(--accent-red); border-radius: var(--radius); margin-bottom: 1rem;"><p>{result}</p></div>', unsafe_allow_html=True)
             
-            st.markdown("<hr>", unsafe_allow_html=True)
+            st.markdown("<hr style='margin: 1.5rem 0;'>", unsafe_allow_html=True)
     else:
         # Si no hay JSON estructurado, mostramos el texto plano
-        st.markdown('<div class="bordered-container">', unsafe_allow_html=True)
+        st.markdown('<div class="bordered-container" style="margin: 1rem 0;">', unsafe_allow_html=True)
         st.markdown(quiz_data)
         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -313,14 +446,13 @@ def is_safe_question(question, context_title, context_summary):
         # En caso de error en la verificación, permitimos la pregunta por defecto
         return True, ""
 
-def chatbot_response_streaming(user_question, context_title, context_summary, text_placeholder, spinner_placeholder):
-    """Genera respuestas del chatbot con streaming y mayor seguridad."""
+def generate_chat_response(user_question, context_title, context_summary):
+    """Genera respuestas del chatbot sin streaming."""
     
     # Revisar si la pregunta es segura y relevante
     is_safe, rejection_reason = is_safe_question(user_question, context_title, context_summary)
     
     if not is_safe:
-        text_placeholder.markdown(rejection_reason)
         return rejection_reason
     
     # Sistema de prompt más restrictivo para mantener respuestas enfocadas
@@ -345,55 +477,61 @@ def chatbot_response_streaming(user_question, context_title, context_summary, te
         {"role": "user", "content": user_question}
     ]
     
-    # Iniciar contenedor vacío para el texto
-    full_response = ""
-    text_placeholder.markdown("", unsafe_allow_html=True)
-    
     try:
-        # Mostrar spinner mientras se genera la respuesta
-        with spinner_placeholder:
-            with st.spinner("Generando respuesta..."):
-                # Iniciar stream de respuesta
-                stream = litellm.completion(
-                    model="deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo",
-                    messages=messages,
-                    max_tokens=600,
-                    temperature=0.3,
-                    stream=True
-                )
-                
-                # Procesar cada fragmento
-                for chunk in stream:
-                    if hasattr(chunk, 'choices') and chunk.choices and chunk.choices[0].delta.content:
-                        content = chunk.choices[0].delta.content
-                        full_response += content
-                        # Actualizar el texto visible
-                        text_placeholder.markdown(full_response)
-                        time.sleep(0.01)  # Pequeña pausa para la visualización
+        # Generar respuesta
+        response = litellm.completion(
+            model="deepinfra/meta-llama/Llama-3.3-70B-Instruct-Turbo",
+            messages=messages,
+            max_tokens=800,
+            temperature=0.3
+        )
         
-        return full_response
+        return response.choices[0].message.content
     except Exception as e:
-        error_msg = f"Lo siento, ocurrió un error al generar la respuesta. Por favor, intenta de nuevo."
-        text_placeholder.markdown(error_msg)
-        return error_msg
+        return f"Lo siento, ocurrió un error al generar la respuesta. Por favor, intenta de nuevo."
+
+def init_chat_container():
+    """Inicializa el contenedor de chat para evitar recargas."""
+    if 'chat_history' not in st.session_state:
+        st.session_state['chat_history'] = []
+    
+    # Mostrar mensaje inicial si no hay historial
+    if len(st.session_state['chat_history']) == 0:
+        st.markdown("""
+        <div class="assistant-message">
+        <p><strong>🤖 Asistente:</strong> Hola, puedo responder tus preguntas específicas sobre este video de primeros auxilios. ¿En qué puedo ayudarte?</p>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    # Mostrar historial de chat existente
+    for msg in st.session_state['chat_history']:
+        if msg['role'] == 'user':
+            st.markdown(f'<div class="user-message"><p><strong>👤 Tú:</strong> {msg["content"]}</p></div>', unsafe_allow_html=True)
+        else:
+            st.markdown(f'<div class="assistant-message"><p><strong>🤖 Asistente:</strong> {msg["content"]}</p></div>', unsafe_allow_html=True)
+
+def handle_chat_submit():
+    """Procesa el envío de mensajes de chat sin recargar la página."""
+    if st.session_state.chat_input:
+        user_message = st.session_state.chat_input
+        
+        # Limpiar el input
+        st.session_state.chat_input = ""
+        
+        # Guardar el mensaje para procesarlo después de la recarga
+        st.session_state['pending_message'] = user_message
 
 def reset_application():
     """Resetea todos los estados para comenzar de nuevo."""
-    keys_to_clear = [
-        'youtube_url', 'video_title', 'video_summary', 'analysis_complete', 
-        'quiz_data', 'user_answers', 'verification_results', 'chat_history',
-        'quiz_generated', 'summary_generated', 'transcript'
-    ]
-    
-    for key in keys_to_clear:
-        if key in st.session_state:
-            del st.session_state[key]
+    # Lista completa de todas las claves de estado que usamos
+    for key in list(st.session_state.keys()):
+        del st.session_state[key]
 
 def run_agent():
     """Función principal para la interfaz del agente de aprendizaje."""
     
     # Título y descripción con el estilo de la aplicación principal
-    st.markdown('<div class="header-box"><h1>🧠 Agente de Aprendizaje</h1><p>Analiza videos de primeros auxilios para mejorar tus conocimientos</p></div>', unsafe_allow_html=True)
+    st.markdown('<div class="header-box"><h1>🧠 Agente de aprendizaje</h1><p>Analiza videos de primeros auxilios para mejorar tus conocimientos</p></div>', unsafe_allow_html=True)
     
     # Botón para resetear la aplicación en la barra lateral
     with st.sidebar:
@@ -402,15 +540,14 @@ def run_agent():
         if st.button("🔄 Reiniciar Agente", key="reset_btn", type="secondary", use_container_width=True):
             reset_application()
             st.success("¡Agente reiniciado correctamente!")
-            time.sleep(1)
-            st.experimental_rerun()
+            st.rerun()
     
     # Contenedor principal estilizado
     with st.container():
         # Si no hay análisis completo, mostrar formulario de entrada
         if 'analysis_complete' not in st.session_state or not st.session_state['analysis_complete']:
             st.markdown("""
-            <div class="bordered-container">
+            <div class="bordered-container" style="margin: 1.5rem 0;">
                 <h3>📹 Introduzca un video de YouTube sobre primeros auxilios</h3>
                 <p>El sistema analizará el video para verificar su relevancia, generará un resumen estructurado y creará un quiz para evaluar tus conocimientos.</p>
             </div>
@@ -420,21 +557,23 @@ def run_agent():
             if 'youtube_url' not in st.session_state:
                 st.session_state['youtube_url'] = ""
             
-            youtube_url = st.text_input("URL del video de YouTube:", 
-                                       value=st.session_state['youtube_url'],
-                                       placeholder="https://www.youtube.com/watch?v=...")
+            youtube_url = st.text_input(
+                label="URL del video de YouTube:", 
+                value=st.session_state['youtube_url'],
+                placeholder="https://www.youtube.com/watch?v=..."
+            )
             
             # Actualizar la URL en session_state
             st.session_state['youtube_url'] = youtube_url
             
             # Botón para analizar el video
-            analyze_clicked = st.button("🔍 Analizar Video", key="analyze_video_btn", use_container_width=True)
+            analyze_clicked = st.button("🔍 Analizar video", key="analyze_video_btn", use_container_width=True)
             
             # Si se ha hecho clic en el botón de análisis
             if analyze_clicked and youtube_url:
                 # Inicializar contenedor para mostrar progreso
                 progress_placeholder = st.empty()
-                progress_placeholder.markdown('<div class="bordered-container" style="text-align: center;"><h3>⏳ Procesando video...</h3></div>', unsafe_allow_html=True)
+                progress_placeholder.markdown('<div class="bordered-container" style="text-align: center; margin: 1rem 0;"><h3>⏳ Procesando video...</h3></div>', unsafe_allow_html=True)
                 
                 # Obtener información del video
                 title, transcript, error = get_video_info(youtube_url)
@@ -445,17 +584,14 @@ def run_agent():
                     
                 elif title:
                     # Actualizar estado de progreso
-                    progress_placeholder.markdown('<div class="bordered-container" style="text-align: center;"><h3>🔍 Verificando relevancia del video...</h3></div>', unsafe_allow_html=True)
+                    progress_placeholder.markdown('<div class="bordered-container" style="text-align: center; margin: 1rem 0;"><h3>🔍 Verificando relevancia del video...</h3></div>', unsafe_allow_html=True)
                     
                     # Verificar si está relacionado con primeros auxilios
                     if is_first_aid_related(title):
                         # Video relevante
-                        progress_placeholder.markdown(f'<div class="bordered-container" style="text-align: center; border-left: 4px solid var(--accent-green);"><h3>✅ Video relevante detectado</h3><p>{title}</p></div>', unsafe_allow_html=True)
+                        progress_placeholder.markdown(f'<div class="bordered-container" style="text-align: center; border-left: 4px solid var(--accent-green); margin: 1rem 0;"><h3>✅ Video relevante detectado</h3><p>{title}</p></div>', unsafe_allow_html=True)
                         
                         if transcript:
-                            # Inicializar interfaz de tabs
-                            tab1, tab2, tab3 = st.tabs(["📝 Resumen", "📋 Quiz", "💬 Chatbot"])
-                            
                             # Marcar análisis como iniciado
                             st.session_state['analysis_complete'] = True
                             st.session_state['video_title'] = title
@@ -463,48 +599,16 @@ def run_agent():
                             st.session_state['summary_generated'] = False
                             st.session_state['quiz_generated'] = False
                             
-                            # Generar resumen en la pestaña de resumen
-                            with tab1:
-                                st.markdown(f'<div class="incident-card"><h3>📝 Resumen de "{title}"</h3></div>', unsafe_allow_html=True)
-                                
-                                # Placeholders para el spinner y el texto
-                                spinner_placeholder = st.empty()
-                                text_placeholder = st.empty()
-                                
-                                # Generar resumen con streaming
-                                summary = generate_summary_streaming(title, transcript, text_placeholder, spinner_placeholder)
-                                
-                                # Guardar el resumen generado
-                                st.session_state['video_summary'] = summary
-                                st.session_state['summary_generated'] = True
-                            
-                            # Mostrar las otras pestañas
-                            with tab2:
-                                # Informamos que se generará el quiz después del resumen
-                                st.info("El quiz se generará automáticamente después de completar el resumen.")
-                            
-                            with tab3:
-                                st.markdown('<div class="incident-card"><h3>💬 Chatbot Contextual</h3><p>Pregunta tus dudas específicas sobre este video de primeros auxilios</p></div>', unsafe_allow_html=True)
-                                
-                                # Inicializar historial de chat
-                                if 'chat_history' not in st.session_state:
-                                    st.session_state['chat_history'] = []
-                                
-                                # Mostrar mensaje inicial
-                                st.markdown("""
-                                <div style="background-color: var(--bg-card); border-radius: var(--radius); padding: 10px; margin: 5px 20% 5px 0;">
-                                <p><strong>🤖 Asistente:</strong> Hola, puedo responder tus preguntas específicas sobre este video de primeros auxilios. ¿En qué puedo ayudarte?</p>
-                                </div>
-                                """, unsafe_allow_html=True)
-                            
+                            # Recargar la página para mostrar las pestañas
+                            st.rerun()
                         else:
                             progress_placeholder.empty()
                             st.warning("⚠️ No se pudo obtener la transcripción del video. Intenta con otro video que tenga subtítulos disponibles.")
                     else:
                         # Video no relevante
                         progress_placeholder.empty()
-                        st.error("""
-                        <div style="padding: 15px; background-color: rgba(255, 107, 107, 0.2); border-left: 4px solid var(--accent-red); border-radius: var(--radius);">
+                        st.markdown("""
+                        <div style="padding: 15px; background-color: rgba(255, 107, 107, 0.2); border-left: 4px solid var(--accent-red); border-radius: var(--radius); margin: 1rem 0;">
                         <h3>❌ Video no relacionado con primeros auxilios</h3>
                         <p>El contenido del video no parece estar relacionado con primeros auxilios o medicina de emergencia.</p>
                         <p>Por favor, intenta con otro video que trate específicamente sobre:</p>
@@ -525,7 +629,7 @@ def run_agent():
         else:
             # Mostrar información del video actualmente analizado
             st.markdown(f"""
-            <div class="bordered-container" style="display: flex; align-items: center; justify-content: space-between;">
+            <div class="bordered-container" style="display: flex; align-items: center; justify-content: space-between; margin: 1rem 0;">
                 <div>
                     <h3>📹 Video analizado:</h3>
                     <p>{st.session_state['video_title']}</p>
@@ -538,16 +642,24 @@ def run_agent():
             </div>
             """, unsafe_allow_html=True)
             
-            # Mostrar tabs con contenido
-            tab1, tab2, tab3 = st.tabs(["📝 Resumen", "📋 Quiz", "💬 Chatbot"])
+            # Crear pestañas - dejamos que Streamlit maneje la navegación
+            tab_names = ["📝 Resumen", "📋 Quiz", "💬 Chatbot"]
+            tabs = st.tabs(tab_names)
             
-            with tab1:
-                # Mostrar resumen
-                st.markdown(f'<div class="incident-card"><h3>📝 Resumen de "{st.session_state["video_title"]}"</h3></div>', unsafe_allow_html=True)
-                
+            # PESTAÑA: RESUMEN (0)
+            with tabs[0]:
                 # Si ya se ha generado el resumen, mostrarlo
                 if 'summary_generated' in st.session_state and st.session_state['summary_generated']:
                     st.markdown(st.session_state['video_summary'])
+                    
+                    # Añadir botón para descargar PDF
+                    pdf_bytes = create_pdf(st.session_state['video_title'], st.session_state['video_summary'])
+                    filename = f"primeros_auxilios_{str(uuid.uuid4())[:8]}.pdf"
+                    
+                    st.markdown(
+                        get_pdf_download_link(pdf_bytes, filename),
+                        unsafe_allow_html=True
+                    )
                 else:
                     # Placeholders para el spinner y el texto
                     spinner_placeholder = st.empty()
@@ -564,121 +676,123 @@ def run_agent():
                     # Guardar el resumen generado
                     st.session_state['video_summary'] = summary
                     st.session_state['summary_generated'] = True
+                    
+                    # Añadir botón para descargar PDF
+                    pdf_bytes = create_pdf(st.session_state['video_title'], summary)
+                    filename = f"primeros_auxilios_{str(uuid.uuid4())[:8]}.pdf"
+                    
+                    st.markdown(
+                        get_pdf_download_link(pdf_bytes, filename),
+                        unsafe_allow_html=True
+                    )
             
-            with tab2:
+            # PESTAÑA: QUIZ (1)
+            with tabs[1]:
                 # Si el resumen está generado, mostrar o generar el quiz
                 if 'summary_generated' in st.session_state and st.session_state['summary_generated']:
                     # Si el quiz ya está generado, mostrarlo
                     if 'quiz_generated' in st.session_state and st.session_state['quiz_generated'] and 'quiz_data' in st.session_state:
                         display_quiz(st.session_state['quiz_data'])
                     else:
-                        # Mostrar encabezado del quiz
-                        st.markdown('<div class="incident-card"><h3>📋 Quiz - Evaluación de conocimientos</h3></div>', unsafe_allow_html=True)
-                        
-                        # Placeholder para el quiz
-                        quiz_placeholder = st.empty()
-                        
-                        # Generar quiz con spinner
-                        quiz_data = generate_quiz(st.session_state['video_summary'], quiz_placeholder)
+                        # Generar quiz
+                        quiz_data = generate_quiz(st.session_state['video_summary'])
                         st.session_state['quiz_data'] = quiz_data
                         st.session_state['quiz_generated'] = True
                         
                         # Inicializar estados del quiz
-                        st.session_state['user_answers'] = {}
                         st.session_state['verification_results'] = {}
                         
                         # Mostrar quiz
+                        st.success("✅ Quiz generado correctamente. Responde las preguntas para evaluar tus conocimientos.")
                         display_quiz(quiz_data)
                 else:
-                    st.info("Primero debe generarse el resumen. Por favor, ve a la pestaña 'Resumen'.")
+                    st.info("⏳ El resumen se está generando. Por favor, espera a que se complete para acceder al quiz.")
+                    if st.button("🔄 Verificar si el resumen está listo", key="check_summary_btn", use_container_width=True):
+                        st.rerun()
             
-            with tab3:
-                st.markdown('<div class="incident-card"><h3>💬 Chatbot Contextual</h3><p>Pregunta tus dudas específicas sobre este video de primeros auxilios</p></div>', unsafe_allow_html=True)
-                
-                # Inicializar historial de chat si no existe
-                if 'chat_history' not in st.session_state:
-                    st.session_state['chat_history'] = []
-                
-                # Contenedor para el chat estilizado
-                chat_container = st.container()
-                
-                # Mostrar historial de chat
-                with chat_container:
-                    # Mensaje inicial si no hay historial
+            # PESTAÑA: CHATBOT (2)
+            with tabs[2]:
+                if 'summary_generated' in st.session_state and st.session_state['summary_generated']:
+                    # Inicializamos el historial de chat si no existe
+                    if 'chat_history' not in st.session_state:
+                        st.session_state['chat_history'] = []
+                        
+                    # Configuramos un key manager para el formulario
+                    if 'form_key' not in st.session_state:
+                        st.session_state['form_key'] = 0
+                    
+                    # Mostramos primero el historial completo
+                    # Mostrar mensaje inicial si no hay historial
                     if len(st.session_state['chat_history']) == 0:
                         st.markdown("""
-                        <div style="background-color: var(--bg-card); border-radius: var(--radius); padding: 10px; margin: 5px 20% 5px 0;">
+                        <div class="assistant-message">
                         <p><strong>🤖 Asistente:</strong> Hola, puedo responder tus preguntas específicas sobre este video de primeros auxilios. ¿En qué puedo ayudarte?</p>
                         </div>
                         """, unsafe_allow_html=True)
                     
-                    # Mostrar mensajes anteriores
+                    # Mostrar todo el historial del chat
                     for msg in st.session_state['chat_history']:
                         if msg['role'] == 'user':
-                            st.markdown(f'<div style="background-color: var(--bg-container); border-radius: var(--radius); padding: 10px; margin: 5px 0 5px 20%; text-align: right;"><p><strong>👤 Tú:</strong> {msg["content"]}</p></div>', unsafe_allow_html=True)
+                            st.markdown(f'<div class="user-message"><p><strong>👤 Tú:</strong> {msg["content"]}</p></div>', unsafe_allow_html=True)
                         else:
-                            st.markdown(f'<div style="background-color: var(--bg-card); border-radius: var(--radius); padding: 10px; margin: 5px 20% 5px 0;"><p><strong>🤖 Asistente:</strong> {msg["content"]}</p></div>', unsafe_allow_html=True)
-                
-                # Añadir una línea divisoria entre el historial y el formulario
-                st.markdown('<hr style="margin: 15px 0; border-color: var(--border-color);">', unsafe_allow_html=True)
-                
-                # Formulario para enviar mensaje con diseño mejorado
-                st.markdown('<div class="bordered-container" style="background-color: var(--bg-card); padding: 15px;">', unsafe_allow_html=True)
-                
-                # Campo de entrada y botón de envío
-                col1, col2 = st.columns([5, 1])
-                
-                with col1:
-                    user_question = st.text_input(
-                        label="",
-                        value="", 
-                        key="user_question_input", 
-                        placeholder="Escribe tu pregunta sobre el video..."
-                    )
-                
-                with col2:
-                    send_btn = st.button("Enviar", 
-                                        key="send_message_btn", 
-                                        use_container_width=True,
-                                        type="primary")
-                
-                st.markdown('</div>', unsafe_allow_html=True)
-                
-                # Procesar el envío del mensaje
-                if send_btn and user_question:
-                    # Añadir pregunta al historial
-                    st.session_state['chat_history'].append({"role": "user", "content": user_question})
+                            st.markdown(f'<div class="assistant-message"><p><strong>🤖 Asistente:</strong> {msg["content"]}</p></div>', unsafe_allow_html=True)
                     
-                    # Mostrar la pregunta del usuario inmediatamente
-                    st.markdown(f'<div style="background-color: var(--bg-container); border-radius: var(--radius); padding: 10px; margin: 5px 0 5px 20%; text-align: right;"><p><strong>👤 Tú:</strong> {user_question}</p></div>', unsafe_allow_html=True)
-                    
-                    # Contenedores para la respuesta streaming
-                    response_container = st.container()
-                    with response_container:
-                        # Placeholders para el spinner y el texto
-                        assistant_container = st.markdown('<div style="background-color: var(--bg-card); border-radius: var(--radius); padding: 10px; margin: 5px 20% 5px 0;"><p><strong>🤖 Asistente:</strong> </p><div id="response-text"></div></div>', unsafe_allow_html=True)
-                        spinner_placeholder = st.empty()
-                        text_placeholder = st.empty()
+                    # Verificar si hay un mensaje pendiente para procesar
+                    if 'pending_message' in st.session_state:
+                        user_message = st.session_state['pending_message']
                         
-                        # Generar respuesta con streaming
-                        assistant_response = chatbot_response_streaming(
-                            user_question, 
-                            st.session_state['video_title'], 
-                            st.session_state['video_summary'],
-                            text_placeholder,
-                            spinner_placeholder
-                        )
+                        # Mostrar mensaje del usuario (que está siendo procesado)
+                        st.markdown(f'<div class="user-message"><p><strong>👤 Tú:</strong> {user_message}</p></div>', unsafe_allow_html=True)
                         
-                        # Añadir respuesta al historial
+                        # Placeholder para el spinner DESPUÉS de los mensajes
+                        response_placeholder = st.empty()
+                        
+                        # Mostrar spinner mientras se genera la respuesta
+                        with response_placeholder:
+                            with st.spinner("Generando respuesta..."):
+                                assistant_response = generate_chat_response(
+                                    user_message,
+                                    st.session_state['video_title'],
+                                    st.session_state['video_summary']
+                                )
+                        
+                        # Mostrar respuesta del asistente
+                        st.markdown(f'<div class="assistant-message"><p><strong>🤖 Asistente:</strong> {assistant_response}</p></div>', unsafe_allow_html=True)
+                        
+                        # Actualizar historial
+                        st.session_state['chat_history'].append({"role": "user", "content": user_message})
                         st.session_state['chat_history'].append({"role": "assistant", "content": assistant_response})
                         
-                        # Limpiar entrada de texto
-                        st.session_state['user_question_input'] = ""
-                        st.experimental_rerun()
+                        # Eliminar mensaje pendiente
+                        del st.session_state['pending_message']
+                    
+                    # Formulario para enviar mensajes (al final)
+                    form_key = f"chat_form_{st.session_state['form_key']}"
+                    with st.form(key=form_key):
+                        user_input = st.text_input(
+                            "Escribe tu pregunta", 
+                            key=f"input_{st.session_state['form_key']}",
+                            placeholder="Escribe tu pregunta sobre el video..."
+                        )
+                        submit_button = st.form_submit_button("Enviar")
+                        
+                        if submit_button and user_input:
+                            # Incrementar el contador de formularios para el próximo uso
+                            st.session_state['form_key'] += 1
+                            
+                            # Guardar mensaje como pendiente para procesarlo fuera del formulario
+                            st.session_state['pending_message'] = user_input
+                            
+                            # Forzar recarga para procesar el mensaje
+                            st.experimental_rerun()
+                else:
+                    st.info("⏳ El resumen se está generando. Por favor, espera a que se complete para acceder al chatbot.")
+                    if st.button("🔄 Verificar si el resumen está listo", key="check_summary_chat_btn", use_container_width=True):
+                        st.rerun()
         
         # Información adicional en la parte inferior
         st.markdown("""
-        <div class="bordered-container" style="margin-top: 20px; opacity: 0.8;">
+        <div class="bordered-container" style="margin: 2rem 0 1rem 0; opacity: 0.8;">
         <h4>💡 Acerca de esta herramienta</h4>
         <p>Esta herramienta usa inteligencia artificial para analizar videos educativos de primeros auxilios. 
         Los resúmenes y quizzes generados son orientativos, pero siempre debes consultar fuentes oficiales y 
