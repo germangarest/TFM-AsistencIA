@@ -481,3 +481,109 @@ button[title="Stop"] span {
     font-size: 0.9rem;
   }
 }
+
+/* ESTILOS ESPECÍFICOS PARA EL AGENTE DE APRENDIZAJE */
+/* Ajuste para contenedor principal del agente */
+.agente-container .main .block-container {
+    padding-left: 2rem;
+    padding-right: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Estilos mejorados para mensajes de chat */
+.user-message {
+    background-color: #457b9d;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 1rem 0 1rem 20%;
+    text-align: right;
+    color: white;
+}
+
+.assistant-message {
+    display: inline-block;
+    background-color: #2a2a2a;
+    border-radius: 8px;
+    padding: 15px;
+    margin: 1rem 20% 1rem 0;
+}
+
+/* Estilos para controles de chat mejorados */
+.chat-controls {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-top: 1.5rem;
+    padding: 0;
+}
+
+.chat-controls > div:first-child {
+    flex-grow: 1;
+}
+
+/* Ajustes para spinners en generación de contenido */
+.stSpinner.agente-spinner {
+    display: flex;
+    justify-content: center;
+    margin: 10px 0;
+}
+
+/* Efecto de hover suavizado para botones */
+.stButton.agente-button button {
+    transition: all 0.2s ease;
+}
+
+.stButton.agente-button button:hover {
+    transform: translateY(-2px);
+}
+
+/* Espaciado mejorado para contenedores de mensajes */
+.chat-message-container {
+    margin-bottom: 1.2rem;
+}
+
+/* Arreglo específico para alineación de botón enviar */
+div.chat-controls div.element-container:last-child {
+    margin-top: 0 !important;
+    padding-top: 0 !important;
+}
+.download-button {
+    display: inline-block;
+    padding: 10px 16px;
+    background-color: #4CAF50;
+    color: black; /* Texto en negro */
+    text-align: center;
+    text-decoration: none;
+    font-size: 16px;
+    border-radius: 5px;
+    cursor: pointer;
+    margin-top: 15px;
+    transition: background-color 0.3s;
+}
+.download-button,
+.download-button:link,
+.download-button:visited,
+.download-button:active,
+.download-button:hover {
+    color: black;
+}
+.download-button:hover {
+    background-color: #45a049;
+}
+/* Ajustes para las pestañas */
+.stTabs [data-baseweb="tab-list"] {
+    gap: 2px;
+}
+
+.stTabs [data-baseweb="tab"] {
+    height: 50px;
+    white-space: pre-wrap;
+    border-radius: 4px 4px 0 0;
+}
+
+.stTabs [aria-selected="true"] {
+    background-color: rgba(0, 104, 201, 0.1);
+    border-bottom-color: rgba(0, 104, 201, 0.8) !important;
+    border-bottom-width: 3px !important;
+}
