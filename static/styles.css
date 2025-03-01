@@ -110,7 +110,7 @@ body {
 /* Ajustes para el contenedor principal */
 .main .block-container {
   padding-top: 1.5rem;
-  max-width: 1200px;
+  max-width: 100%;
   background-color: var(--bg-main);
 }
 

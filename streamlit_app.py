@@ -48,27 +48,34 @@ with st.sidebar:
     # Contenedor para los botones de navegación
     col1, col2 = st.columns(2)
     
-    # Botón "Detección" con tipo primario si está activo
     if col1.button("📹 Detección", 
                   key="btn_detection",
                   use_container_width=True,
                   type="primary" if st.session_state.current_tab == "Detección" else "secondary"):
         st.session_state.current_tab = "Detección"
-        # Limpiamos los procesos de la pestaña anterior si es necesario
         if 'run' in st.session_state:
             st.session_state['run'] = False
         st.rerun()
     
-    # Botón "Chatbot" con tipo primario si está activo
     if col2.button("💬 Chatbot", 
                   key="btn_chatbot",
                   use_container_width=True,
                   type="primary" if st.session_state.current_tab == "Chatbot" else "secondary"):
         st.session_state.current_tab = "Chatbot"
         st.rerun()
+    
+    # Agregar el nuevo botón para el Agente
+    if st.button("🧠 Agente", 
+               key="btn_agent",
+               use_container_width=True,
+               type="primary" if st.session_state.current_tab == "Agente" else "secondary"):
+        st.session_state.current_tab = "Agente"
+        st.rerun()
 
-# Ejecutar la pestaña correspondiente
+# Luego actualizar las condiciones para ejecutar cada pestaña
 if st.session_state.current_tab == "Detección":
     exec(open("deteccion.py", encoding="utf-8").read())
 elif st.session_state.current_tab == "Chatbot":
     exec(open("chatbot.py", encoding="utf-8").read())
+elif st.session_state.current_tab == "Agente":
+    exec(open("agente.py", encoding="utf-8").read())
