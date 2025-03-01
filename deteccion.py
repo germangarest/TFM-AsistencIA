@@ -617,7 +617,7 @@ def main():
                     )
                     
                     # Enviar correo de alerta
-                    if not alert_sent:
+                    if not alert_sent and stats["Incendio"] >= 1:
                         send_email_alert()  # Enviar email
                         alert_sent = True  # Evitar alertas repetidas
                 
