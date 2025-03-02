@@ -343,7 +343,7 @@ def main():
                         # Ocultar el uploader
                         uploader_container.empty()
                         # Recargar para aplicar los cambios en la UI
-                        st.rerun()
+                        st.experimental_rerun()
             
             # Contenedor para el video (siempre visible)
             if st.session_state.video_uploaded:
@@ -385,7 +385,6 @@ def main():
                         frame_container.image(
                             st.session_state.last_frame, 
                             channels="BGR", 
-                            use_container_width=False,
                             width=640  # Ancho cambiado a 640
                         )
                         st.markdown("</div></div>", unsafe_allow_html=True)
@@ -408,14 +407,14 @@ def main():
                             total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
                             model = load_unified_model()
                             classes = {
-                                0: ("Accidente", (214, 40, 40)),
-                                1: ("Pelea", (46, 147, 60)),
-                                2: ("Incendio", (29, 53, 87))
+                                0: ("Accidente", (255, 0, 0)),
+                                1: ("Pelea", (0, 165, 255)),
+                                2: ("Incendio", (0, 0, 255))
                             }
                             
                             frame_count = 0
                             last_detections = None
-                            frame_skip = 3
+                            frame_skip = 8
                             vp = VideoProcessor()
                             
                             # Contadores para estadísticas
@@ -440,8 +439,7 @@ def main():
                                     frame_container.image(
                                         frame, 
                                         channels="BGR", 
-                                        use_container_width=False,
-                                        width=640  # Ancho cambiado a 640
+                                        width=640  
                                     )
                                     continue
                                 
@@ -463,7 +461,6 @@ def main():
                                 frame_container.image(
                                     frame, 
                                     channels="BGR", 
-                                    use_container_width=False,
                                     width=640  # Ancho cambiado a 640
                                 )
                                 
@@ -486,7 +483,7 @@ def main():
                             st.markdown("</div></div>", unsafe_allow_html=True)
                             
                             # Recargar para mostrar los resultados finales
-                            st.rerun()
+                            st.experimental_rerun()
         
         with col2:
             st.markdown("### Recomendaciones")
@@ -511,13 +508,13 @@ def main():
             # Mostrar botón para nuevo análisis si ya hay resultados
             if st.session_state.analysis_complete:
                 st.markdown("<br>", unsafe_allow_html=True)
-                if st.button("🔄 Analizar otro video", use_container_width=True):
+                if st.button("🔄 Analizar otro video"):
                     # Reiniciar estado
                     st.session_state.video_uploaded = False
                     st.session_state.analysis_complete = False
                     st.session_state.video_file = None
                     st.session_state.last_frame = None
-                    st.rerun()
+                    st.experimental_rerun()
         
         # Mostrar resultados del análisis después de completado
         if st.session_state.analysis_complete:
@@ -537,8 +534,8 @@ def main():
             )
             
             # Mostrar resultados
-            if stats["Total"] > 0:
-                st.success(f"Análisis completado: se detectaron {stats['Total']} incidentes")
+            if any(stats.values()):
+                st.success(f"Análisis completado: se han detectado incidentes")
                 
                 # Mostrar las estadísticas en tarjetas atractivas
                 col1, col2, col3 = st.columns(3)
@@ -548,7 +545,7 @@ def main():
                         f"""
                         <div class="incident-card accident" style="text-align: center;">
                             <h4 style="margin:0;">🚗 Accidentes</h4>
-                            <p style="font-size:2rem; font-weight:bold; margin:10px 0;">{stats["Accidente"]}</p>
+                            <p style="font-size:1.2rem; font-weight:bold; margin:10px 0;">{"✅ Detectado" if stats["Accidente"] else "❌ No detectado"}</p>
                         </div>
                         """, 
                         unsafe_allow_html=True
@@ -559,7 +556,7 @@ def main():
                         f"""
                         <div class="incident-card fight" style="text-align: center;">
                             <h4 style="margin:0;">👥 Peleas</h4>
-                            <p style="font-size:2rem; font-weight:bold; margin:10px 0;">{stats["Pelea"]}</p>
+                            <p style="font-size:1.2rem; font-weight:bold; margin:10px 0;">{"✅ Detectado" if stats["Pelea"] else "❌ No detectado"}</p>
                         </div>
                         """, 
                         unsafe_allow_html=True
@@ -570,13 +567,11 @@ def main():
                         f"""
                         <div class="incident-card fire" style="text-align: center;">
                             <h4 style="margin:0;">🔥 Incendios</h4>
-                            <p style="font-size:2rem; font-weight:bold; margin:10px 0;">{stats["Incendio"]}</p>
+                            <p style="font-size:1.2rem; font-weight:bold; margin:10px 0;">{"✅ Detectado" if stats["Incendio"] else "❌ No detectado"}</p>
                         </div>
                         """, 
                         unsafe_allow_html=True
                     )
-                
-                # Se ha eliminado la gráfica de barras
                 
             else:
                 st.info("No se detectaron incidentes en este video")
@@ -591,10 +586,10 @@ def main():
         col1, col2 = st.columns([1, 1])
         
         with col1:
-            if st.button("🗑️ Limpiar historial", use_container_width=True):
+            if st.button("🗑️ Limpiar historial"):
                 st.session_state.history = []
                 st.success("Historial eliminado correctamente")
-                st.rerun()
+                st.experimental_rerun()
         
         with col2:
             if st.session_state.history:
@@ -605,7 +600,6 @@ def main():
                     data=csv,
                     file_name=f"historial_incidentes_{datetime.now().strftime('%Y%m%d_%H%M')}.csv",
                     mime="text/csv",
-                    use_container_width=True
                 )
         
         # Mostrar contenido del historial
@@ -697,11 +691,11 @@ def main():
                         if selected_tipos:
                             filtered_df = df[df['Tipo de incidente'].isin(selected_tipos)]
                             # Mostrar tabla
-                            st.dataframe(filtered_df, use_container_width=True)
+                            st.dataframe(filtered_df, width=None)
                         else:
                             st.warning("Selecciona al menos un tipo de incidente para ver los datos")
                     else:
-                        st.dataframe(df, use_container_width=True)
+                        st.dataframe(df, width=None)
 
 if __name__ == "__main__":
     main()
