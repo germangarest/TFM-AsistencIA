@@ -11,6 +11,9 @@ import time
 from fpdf import FPDF
 import base64
 import uuid
+import markdown2
+from weasyprint import HTML
+from io import BytesIO
 
 # Cargar variables de entorno
 load_dotenv()
@@ -191,78 +194,69 @@ def generate_summary_streaming(title, transcript, text_placeholder, spinner_plac
 
 # Función para generar PDF del resumen
 def create_pdf(title, summary):
-    """Crea un archivo PDF con el resumen del video."""
-    pdf = FPDF()
-    pdf.add_page()
+    """Crea un PDF con el resumen del video aplicando completamente el formato markdown."""
+    # Convertir Markdown a HTML
+    html_content = markdown2.markdown(summary, extras=["tables", "fenced-code-blocks"])
     
-    # Configuración del título
-    pdf.set_font("Arial", "B", 16)
-    pdf.cell(0, 10, "Resumen de Primeros Auxilios", ln=True, align="C")
-    pdf.ln(5)
-    
-    # Título del video
-    pdf.set_font("Arial", "B", 12)
-    
-    # Dividir el título en múltiples líneas si es muy largo
-    max_chars_per_line = 80
-    title_words = title.split()
-    current_line = ""
-    
-    for word in title_words:
-        if len(current_line + " " + word) <= max_chars_per_line:
-            current_line += " " + word if current_line else word
-        else:
-            pdf.cell(0, 6, current_line.strip(), ln=True)
-            current_line = word
-    
-    # Agregar la última línea del título
-    if current_line:
-        pdf.cell(0, 6, current_line.strip(), ln=True)
-    
-    pdf.ln(5)
-    
-    # Fecha de generación
-    pdf.set_font("Arial", "I", 10)
+    # Crear documento HTML completo con estilos CSS
     current_date = time.strftime("%d/%m/%Y %H:%M:%S")
-    pdf.cell(0, 10, f"Generado el: {current_date}", ln=True)
-    pdf.ln(10)
     
-    # Contenido del resumen
-    pdf.set_font("Arial", "", 11)
+    html = f"""
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <meta charset="UTF-8">
+        <title>Resumen de Primeros Auxilios</title>
+        <style>
+            body {{
+                font-family: Arial, sans-serif;
+                line-height: 1.6;
+                margin: 2cm;
+                font-size: 11pt;
+            }}
+            h1 {{
+                font-size: 18pt;
+                text-align: center;
+                margin-bottom: 1cm;
+            }}
+            h2 {{
+                font-size: 14pt;
+                margin-top: 0.8cm;
+                color: #333;
+            }}
+            h3 {{
+                font-size: 12pt;
+                margin-top: 0.6cm;
+                color: #333;
+            }}
+            .title {{
+                font-size: 14pt;
+                font-weight: bold;
+                margin-bottom: 0.5cm;
+            }}
+            .date {{
+                font-style: italic;
+                margin-bottom: 1cm;
+            }}
+            ul, ol {{
+                margin-left: 0.5cm;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Resumen de Primeros Auxilios</h1>
+        <div class="title">{title}</div>
+        <div class="date">Generado el: {current_date}</div>
+        {html_content}
+    </body>
+    </html>
+    """
     
-    # Dividir el texto en líneas para procesarlo párrafo por párrafo
-    lines = summary.split('\n')
+    # Convertir HTML a PDF
+    pdf_buffer = BytesIO()
+    HTML(string=html).write_pdf(pdf_buffer)
     
-    for line in lines:
-        if not line.strip():
-            pdf.ln(3)
-            continue
-            
-        # Detectar títulos (líneas que parecen encabezados)
-        if line.strip() and len(line.strip()) < 70 and not line.strip().endswith('.'):
-            pdf.set_font("Arial", "B", 12)
-            pdf.ln(5)
-            pdf.multi_cell(0, 10, line)
-            pdf.set_font("Arial", "", 11)
-        else:
-            # Divide líneas muy largas
-            pdf.multi_cell(0, 7, line)
-            pdf.ln(1)
-    
-    # Generar el archivo PDF en memoria
-    try:
-        pdf_output = pdf.output(dest="S").encode("latin1")
-        return pdf_output
-    except Exception as e:
-        print(f"Error al generar PDF: {str(e)}")
-        # Fallback en caso de error con caracteres especiales
-        pdf = FPDF()
-        pdf.add_page()
-        pdf.set_font("Arial", "B", 16)
-        pdf.cell(0, 10, "Resumen de Primeros Auxilios", ln=True, align="C")
-        pdf.set_font("Arial", "", 12)
-        pdf.multi_cell(0, 10, "Error al generar el PDF. Por favor, copie y pegue el resumen manualmente.")
-        return pdf.output(dest="S").encode("latin1")
+    return pdf_buffer.getvalue()
 
 # Función para crear un enlace de descarga para el PDF
 def get_pdf_download_link(pdf_bytes, filename):
@@ -522,10 +516,19 @@ def handle_chat_submit():
         st.session_state['pending_message'] = user_message
 
 def reset_application():
-    """Resetea todos los estados para comenzar de nuevo."""
-    # Lista completa de todas las claves de estado que usamos
-    for key in list(st.session_state.keys()):
-        del st.session_state[key]
+    """Resetea solo los estados relacionados con el agente sin afectar la navegación."""
+    # Lista de claves específicas del agente que queremos reiniciar
+    agent_keys = [
+        'analysis_complete', 'video_title', 'transcript', 
+        'summary_generated', 'quiz_generated', 'youtube_url',
+        'video_summary', 'quiz_data', 'chat_history', 
+        'form_key', 'verification_results', 'pending_message'
+    ]
+    
+    # Eliminar solo las claves del agente si existen
+    for key in agent_keys:
+        if key in st.session_state:
+            del st.session_state[key]
 
 def run_agent():
     """Función principal para la interfaz del agente de aprendizaje."""
@@ -540,7 +543,9 @@ def run_agent():
         if st.button("🔄 Reiniciar Agente", key="reset_btn", type="secondary", use_container_width=True):
             reset_application()
             st.success("¡Agente reiniciado correctamente!")
-            st.rerun()
+            # Utilizamos experimental_rerun en lugar de rerun para mantener el estado de navegación
+            time.sleep(0.5)  # Pequeña pausa para que se muestre el mensaje
+            st.experimental_rerun()
     
     # Contenedor principal estilizado
     with st.container():
