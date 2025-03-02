@@ -1,24 +1,25 @@
 <div align="center">
-  <img src="https://github.com/germangarest/TFM-AsistencIA/img/logo.png" alt="AsistencIA Logo" width="50%">
   <h1>🚨 AsistencIA - sistema de detección de incidentes en tiempo real</h1>
-  <p><em>Consigue tiempo para actuar frente a emergencias y salvar vidas.</em></p>
   
-  <div align="center">
-    <table>
-      <tr>
-        <td align="center">
-          <a href="#" style="text-decoration: none;">
-            <img src="https://img.shields.io/badge/🌐_Web_Principal-AsistencIA-2962FF?style=for-the-badge&logo=globe&logoColor=white" alt="Web Principal"/>
-          </a>
-        </td>
-        <td align="center">
-          <a href="#" style="text-decoration: none;">
-            <img src="https://img.shields.io/badge/Video_explicativo-FF5757?style=for-the-badge&logo=youtube&logoColor=white" alt="Video Explicativo"/>
-          </a>
-        </td>
-      </tr>
-    </table>
+  <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
+    <img src="img/logo.png" alt="AsistencIA Logo" width="30%">
+    <p><em>Consigue tiempo para actuar frente a emergencias y salvar vidas.</em></p>
   </div>
+  
+  <table>
+    <tr>
+      <td align="center">
+        <a href="#" style="text-decoration: none;">
+          <img src="https://img.shields.io/badge/🌐_Web_Principal-AsistencIA-2962FF?style=for-the-badge&logo=globe&logoColor=white" alt="Web Principal"/>
+        </a>
+      </td>
+      <td align="center">
+        <a href="#" style="text-decoration: none;">
+          <img src="https://img.shields.io/badge/Video_explicativo-FF5757?style=for-the-badge&logo=youtube&logoColor=white" alt="Video Explicativo"/>
+        </a>
+      </td>
+    </tr>
+  </table>
 </div>
 
 ## 🏷️ Índice
@@ -37,7 +38,7 @@
 ## 1. Justificación y descripción del proyecto
 _AsistencIA_ es un proyecto de Inteligencia Artificial y Big Data orientado a la detección temprana de tres tipos de emergencias mediante análisis de video: accidentes de coche, incendios y peleas. La idea principal es utilizar cámaras de la vía pública para alertar de forma inmediata a servicios de emergencia (bomberos, ambulancias y policía) y, a la vez, ofrecer herramientas de capacitación ciudadana y asistencia en tiempo real.
 
-<img src="img/logo.png" alt="AsistencIA" width="400"/>
+<img src="img/logo_2.png" alt="AsistencIA" width="200"/>
 
 El proyecto _AsistencIA_ tiene como objetivo desarrollar un sistema integral que detecte, mediante análisis de video, situaciones críticas en tiempo real. Las principales emergencias a detectar son:
 
