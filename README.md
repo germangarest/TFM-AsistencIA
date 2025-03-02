@@ -2,7 +2,7 @@
   <h1>🚨 AsistencIA - sistema de detección de incidentes en tiempo real</h1>
   
   <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-    <img src="img/logo.png" alt="AsistencIA Logo" width="30%">
+    <img src="img/logo.png" alt="AsistencIA Logo" width="35%">
     <p><em>Consigue tiempo para actuar frente a emergencias y salvar vidas.</em></p>
   </div>
   
@@ -54,8 +54,6 @@ Además, se incorporan funcionalidades adicionales para mejorar la respuesta y f
 La interfaz principal del sistema muestra nuestro panel de detección:
 
 <img src="img/interfaz_principal.png" alt="Interfaz Principal" width="800"/>
-
-## A continuación, describiremos cada componente del sistema y su implementación.
 
 ---
 
