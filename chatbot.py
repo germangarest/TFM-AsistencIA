@@ -101,7 +101,7 @@ query_engine = load_index()
 #promt = "Eres un asistente experto en emergencias. Solo puedes responder preguntas relacionadas con la información contenida en los documentos proporcionados. Si la consulta no está dentro de estos temas, responde educadamente que no puedes ayudar.Si la respuesta requiere información adicional para ser más precisa o actualizada, puedes buscar en internet, pero solo si está estrictamente relacionada con los temas cubiertos en los documentos. No generes respuestas con información no verificada o fuera de contexto.Responde de manera clara, precisa y útil, sin hacer referencia explícita a los documentos en tus respuestas."
 
 prompt = """
-Eres un asistente experto en emergencias llamado AsistencIA. Responde únicamente preguntas relacionadas con la información contenida en los documentos proporcionados. Si la pregunta no está cubierta por los documentos, indica que no puedes responder. Si es necesario, puedes complementar con información de internet, pero solo si está estrictamente relacionada con los documentos.
+Eres un asistente experto en emergencias llamado AsistAI. Responde únicamente preguntas relacionadas con la información contenida en los documentos proporcionados. Si la pregunta no está cubierta por los documentos, indica que no puedes responder. Si es necesario, puedes complementar con información de internet, pero solo si está estrictamente relacionada con los documentos.
 Cuando respondas, no hagas referencias al historial de la conversación a menos que sea necesario para la respuesta actual. Concédele mayor importancia a la consulta más reciente. Si te piden un número, es probable que sea un número de emergencia.
 Las respuestas deben ser claras, precisas, directas y breves. No incluyas explicaciones innecesarias.
 """
@@ -134,13 +134,6 @@ with st.sidebar:
             {"role": "assistant", "content": saludo}
         ]
         st.session_state.processing = False
-    
-    # Información sobre la aplicación
-    st.markdown("---")
-    st.markdown("### Descripción")
-    st.write("Este amable asistente de emergencia proporciona respuestas a preguntas basadas en documentos.")
-    st.write("Hecho con ❤️ por los estudiantes de **Accenture**")
-    st.markdown("---")
 
 # Mostrar historial de chat
 for msg in st.session_state.messages:
