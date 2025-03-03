@@ -50,6 +50,11 @@ def send_email_alert(emergencia):
     except Exception as e:
         st.error(f"⚠️ No se pudo enviar el email: {e}")
 
+
+# Inicializa la variable alert_sent en False si no existe en session_state
+if 'alert_sent' not in st.session_state:
+    st.session_state.alert_sent = False
+
 # Global variable para el umbral de confianza
 CONF_THRESHOLD = 0.45
 
@@ -550,6 +555,7 @@ def main():
                     st.session_state.analysis_complete = False
                     st.session_state.video_file = None
                     st.session_state.last_frame = None
+                    st.session_state.alert_sent = False
                     st.experimental_rerun()
         
         # Mostrar resultados del análisis después de completado
@@ -610,9 +616,9 @@ def main():
                     )
                     
                 # Enviar correo de alerta
-                if stats['Total'] > 0:
+                if stats['Total'] > 0 and not st.session_state.alert_sent:
                     send_email_alert()  # Enviar email
-                    alert_sent = True  # Evitar alertas repetidas                        
+                    st.session_state.alert_sent = True  # Evitar alertas repetidas                        
                 
                 # Se ha eliminado la gráfica de barras
             else:
