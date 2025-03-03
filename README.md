@@ -32,6 +32,7 @@
 7. [🗣️ Procesamiento de Lenguaje Natural](#7-procesamiento-de-lenguaje-natural)  
 8. [🌐 Aplicación web](#8-aplicación-web)  
 9. [💡 Conclusiones](#9-conclusiones)
+10. [👥 Integrantes del equipo y porcentaje de contribución](#10-integrantes-del-equipo-y-porcentaje-de-contribución)
 
 ---
 
@@ -502,7 +503,7 @@ Es importante señalar que un sistema como _AsistencIA_ debe implementarse consi
 
 _AsistencIA_ demuestra el potencial de la IA para crear tecnologías que no solo son técnicamente avanzadas, sino que también tienen un impacto social positivo, contribuyendo a comunidades más seguras y mejor preparadas ante emergencias.
 
-### 👥 Integrantes del equipo y porcentaje de contribución
+## 10. 👥 Integrantes del equipo y porcentaje de contribución
 
 | [![Germán García Estévez](https://github.com/germangarest.png?size=100)](https://github.com/germangarest) | [![David Moreno Cerezo](https://github.com/DavidMoCe.png?size=100)](https://github.com/DavidMoCe) |
 |:---------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
