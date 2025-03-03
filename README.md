@@ -9,13 +9,18 @@
   <table>
     <tr>
       <td align="center">
-        <a href="#" style="text-decoration: none;">
+        <a href="https://asistencia.germange.com/" style="text-decoration: none;">
           <img src="https://img.shields.io/badge/🌐_Web_Principal-AsistencIA-2962FF?style=for-the-badge&logo=globe&logoColor=white" alt="Web Principal"/>
         </a>
       </td>
       <td align="center">
-        <a href="#" style="text-decoration: none;">
+        <a href="https://youtu.be/OeavSc1zvS0" style="text-decoration: none;">
           <img src="https://img.shields.io/badge/Video_explicativo-FF5757?style=for-the-badge&logo=youtube&logoColor=white" alt="Video Explicativo"/>
+        </a>
+      </td>
+      <td align="center">
+        <a href="https://view.genially.com/67c485f7d334a3d3b6c8cf5c/presentation-asistencia" style="text-decoration: none;">
+          <img src="https://img.shields.io/badge/🎯_PRESENTACIÓN-https://view.genially.com/67c485f7d334a3d3b6c8cf5c/presentation-asistencia-FF9E00?style=for-the-badge&labelColor=D97F00&logo=googleslides&logoColor=white" alt="Presentacion"/>
         </a>
       </td>
     </tr>
