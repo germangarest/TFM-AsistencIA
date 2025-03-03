@@ -2,7 +2,7 @@
   <h1>🚨 AsistencIA - sistema de detección de incidentes en tiempo real</h1>
   
   <div style="display: flex; align-items: center; justify-content: center; gap: 20px;">
-    <img src="img/logo.png" alt="AsistencIA Logo" width="35%">
+    <img src="img/logo.png" alt="AsistencIA Logo" width="45%">
     <p><em>Consigue tiempo para actuar frente a emergencias y salvar vidas.</em></p>
   </div>
   
@@ -286,7 +286,7 @@ Para cada modelo, ajustamos hiperparámetros específicos según las caracterís
    - Regularización: Dropout 0.15, Weight decay 0.0007
    - Aumento de datos más agresivo para capturar la variabilidad del movimiento
 
-   <img src="img/metric_fight.jpg" alt="Métricas de entrenamiento - Peleas" width="600"/>
+   <img src="img/metrica_fight.jpg" alt="Métricas de entrenamiento - Peleas" width="600"/>
 
 3. **Modelo de incendios:**
    - Épocas: 180
@@ -473,6 +473,6 @@ _AsistencIA_ demuestra el potencial de la IA para crear tecnologías que no solo
 
 | [![Germán García Estévez](https://github.com/germangarest.png?size=100)](https://github.com/germangarest) | [![David Moreno Cerezo](https://github.com/DavidMoCe.png?size=100)](https://github.com/DavidMoCe) |
 |:---------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
-| **Germán García Estévez**                                                                                 | **David Moreno Cerezo**                                                                           |
+| **Germán García Estévez**<br>X% contribución                                                               | **David Moreno Cerezo**<br>X% contribución                                                     |
 
 ---
