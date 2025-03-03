@@ -503,7 +503,7 @@ Es importante señalar que un sistema como _AsistencIA_ debe implementarse consi
 
 _AsistencIA_ demuestra el potencial de la IA para crear tecnologías que no solo son técnicamente avanzadas, sino que también tienen un impacto social positivo, contribuyendo a comunidades más seguras y mejor preparadas ante emergencias.
 
-## 10. 👥 Integrantes del equipo y porcentaje de contribución
+## 10. Integrantes del equipo y porcentaje de contribución
 
 | [![Germán García Estévez](https://github.com/germangarest.png?size=100)](https://github.com/germangarest) | [![David Moreno Cerezo](https://github.com/DavidMoCe.png?size=100)](https://github.com/DavidMoCe) |
 |:---------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
