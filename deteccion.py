@@ -14,8 +14,48 @@ import time
 from typing import Dict, List
 import psutil
 
+import smtplib
+from email.mime.text import MIMEText
+from email.mime.multipart import MIMEMultipart
+
+# ===============================
+# Función para enviar un correo de alerta
+# ===============================
+# Función para enviar un correo de alerta
+def send_email_alert():
+    sender_email = "www.jaradavid@gmail.com"
+    receiver_email = "www.jaradavid@gmail.com"
+    password = "wlspfukvtrwdkuwf"
+
+    # Crear el mensaje con codificación UTF-8
+    msg = MIMEMultipart()
+    msg['From'] = sender_email
+    msg['To'] = receiver_email
+    msg['Subject'] = '🚨 Alerta de emergencia'
+
+    # Cuerpo del mensaje
+    body = """\
+    ¡Atención! Se ha detectado una emergencia en la cámara. Revisa la ubicación inmediatamente.
+    """
+    msg.attach(MIMEText(body, 'plain', 'utf-8'))
+
+    try:
+        # Conexión al servidor SMTP de Gmail
+        server = smtplib.SMTP("smtp.gmail.com", 587)
+        server.starttls()  # Iniciar la conexión segura
+        server.login(sender_email, password)
+        server.sendmail(sender_email, receiver_email, msg.as_string())
+        server.quit()
+        st.success("✅ Alerta de email enviada.")
+    except Exception as e:
+        st.error(f"⚠️ No se pudo enviar el email: {e}")
+
+# Inicializa la variable alert_sent en False si no existe en session_state
+if 'alert_sent' not in st.session_state:
+    st.session_state.alert_sent = False
+
 # Global variable para el umbral de confianza
-CONF_THRESHOLD = 0.45
+CONF_THRESHOLD = 0.5
 
 # ===============================
 # Precarga del modelo unificado
@@ -414,7 +454,7 @@ def main():
                             
                             frame_count = 0
                             last_detections = None
-                            frame_skip = 8
+                            frame_skip = 3
                             vp = VideoProcessor()
                             
                             # Contadores para estadísticas
@@ -514,6 +554,7 @@ def main():
                     st.session_state.analysis_complete = False
                     st.session_state.video_file = None
                     st.session_state.last_frame = None
+                    st.session_state.alert_sent = False
                     st.experimental_rerun()
         
         # Mostrar resultados del análisis después de completado
@@ -572,6 +613,11 @@ def main():
                         """, 
                         unsafe_allow_html=True
                     )
+
+                # Enviar correo de alerta
+                if stats['Total'] > 0 and not st.session_state.alert_sent:
+                    send_email_alert()  # Enviar email
+                    st.session_state.alert_sent = True  # Evitar alertas repetidas 
                 
             else:
                 st.info("No se detectaron incidentes en este video")
