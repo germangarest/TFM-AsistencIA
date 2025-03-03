@@ -428,6 +428,8 @@ Características:
 - **Análisis de videos:** Procesamiento de videos subidos por el usuario.
 - **Sistema de alertas por email:** Cuando se detecta un incidente en el análisis de video, el sistema envía automáticamente una alerta por correo electrónico a los responsables designados, lo que permite una respuesta rápida ante emergencias detectadas.
 
+  <img src="img/email_alert.png" alt="Alerta por Email" width="700"/>
+
   <img src="img/deteccion_video.png" alt="Análisis de Video" width="700"/>
 
 - **Registro histórico:** Seguimiento de incidentes detectados con estadísticas y filtros.
