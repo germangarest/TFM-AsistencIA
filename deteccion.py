@@ -586,11 +586,6 @@ def main():
                         """, 
                         unsafe_allow_html=True
                     )
-
-                    # Enviar correo de alerta
-                    if not alert_sent and stats["Accidente"] >= 1:
-                        send_email_alert()  # Enviar email
-                        alert_sent = True  # Evitar alertas repetidas
                 
                 with col2:
                     st.markdown(
@@ -602,11 +597,6 @@ def main():
                         """, 
                         unsafe_allow_html=True
                     )
-
-                    # Enviar correo de alerta
-                    if not alert_sent and stats["Pelea"] >= 1:
-                        send_email_alert()  # Enviar email
-                        alert_sent = True  # Evitar alertas repetidas
                 
                 with col3:
                     st.markdown(
@@ -619,13 +609,12 @@ def main():
                         unsafe_allow_html=True
                     )
                     
-                    # Enviar correo de alerta
-                    if not alert_sent and stats["Incendio"] >= 1:
-                        send_email_alert()  # Enviar email
-                        alert_sent = True  # Evitar alertas repetidas
+                # Enviar correo de alerta
+                if stats['Total'] > 0:
+                    send_email_alert()  # Enviar email
+                    alert_sent = True  # Evitar alertas repetidas                        
                 
                 # Se ha eliminado la gráfica de barras
-                
             else:
                 st.info("No se detectaron incidentes en este video")
             
