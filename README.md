@@ -315,6 +315,12 @@ Para mejorar el rendimiento en tiempo real y la capacidad de procesamiento en di
 2. **Estrategia de batch y frame skipping:** Procesando selectivamente frames clave para equilibrar precisión y velocidad.
 3. **Optimización multi-threading:** Aprovechando procesamiento paralelo para la inferencia simultánea de los tres modelos.
 
+### Optimizaciones específicas por tipo de emergencia
+
+- **Accidentes de coche:** Enfoque en la precisión de detección de vehículos dañados, con regularización moderada para evitar falsos positivos.
+- **Peleas:** Mayor dropout y augmentación más agresiva para capturar la variabilidad del movimiento humano en situaciones de conflicto.
+- **Incendios:** Uso de modelo YOLOv8m más grande para capturar mejor las características visuales del fuego, con ajustes específicos en los parámetros HSV para preservar las características de color.
+
 Estas optimizaciones nos permitieron alcanzar un rendimiento cercano a tiempo real en equipos estándar, facilitando la implementación práctica del sistema.
 
 ---
@@ -352,6 +358,7 @@ no está cubierta por los documentos, indica que no puedes responder.
 """
 ```
 
+
 ### Agente de Aprendizaje:
 
 Implementamos un sistema que procesa videos educativos de primeros auxilios para generar materiales de aprendizaje:
@@ -372,11 +379,36 @@ Características principales:
 
    <img src="img/agente_chatbot.png" alt="Chatbot del agente" width="600"/>
 
+### Seguridad y relevancia
+
+Nuestro sistema implementa verificaciones robustas para asegurar que las consultas sean relevantes y seguras:
+
+```python
+def is_safe_question(question, context_title, context_summary):
+    # Lista de patrones sospechosos de prompt hacking
+    suspicious_patterns = [
+        r"ignora.{0,30}(instrucciones|contexto)",
+        r"olvida.{0,30}(instrucciones|contexto)",
+        # [más patrones]
+    ]
+    
+    # Verificar patrones sospechosos
+    for pattern in suspicious_patterns:
+        if re.search(pattern, question, re.IGNORECASE):
+            return False, "La pregunta contiene patrones sospechosos"
+```
+
 La implementación utiliza técnicas avanzadas de NLP:
 - **Extracción y análisis de transcripciones** de YouTube con la API YouTubeTranscriptApi
 - **Procesamiento de prompts complejos** para estructurar resúmenes y cuestionarios
 - **Verificación de relevancia temática** para asegurar que los videos sean sobre primeros auxilios
 - **Generación estructurada** de contenido educativo
+
+### Modelos y tecnologías utilizadas
+
+- **Backend LLM:** Utilizamos DeepInfra (em ambos chatbots) con el modelo Llama-3.3-70B-Instruct-Turbo para generar respuestas precisas y naturales.
+- **Embeddings:** BAAI/bge-m3 para la vectorización eficiente de documentos y consultas (en el chatbot asistencial).
+- **Procesamiento de documentos:** LlamaIndex para la indexación y recuperación eficiente de información.
 
 Estos componentes de NLP complementan las capacidades de detección visual, ofreciendo un sistema integral para situaciones de emergencia.
 
@@ -393,6 +425,7 @@ Desarrollamos una interfaz web intuitiva utilizando Streamlit para facilitar el 
 Características:
 - **Detección por webcam:** Análisis en tiempo real del feed de la cámara.
 - **Análisis de videos:** Procesamiento de videos subidos por el usuario.
+- **Sistema de alertas por email:** Cuando se detecta un incidente en el análisis de video, el sistema envía automáticamente una alerta por correo electrónico a los responsables designados, lo que permite una respuesta rápida ante emergencias detectadas.
 
   <img src="img/deteccion_video.png" alt="Análisis de Video" width="700"/>
 
@@ -473,6 +506,6 @@ _AsistencIA_ demuestra el potencial de la IA para crear tecnologías que no solo
 
 | [![Germán García Estévez](https://github.com/germangarest.png?size=100)](https://github.com/germangarest) | [![David Moreno Cerezo](https://github.com/DavidMoCe.png?size=100)](https://github.com/DavidMoCe) |
 |:---------------------------------------------------------------------------------------------------------:|:-------------------------------------------------------------------------------------------------:|
-| **Germán García Estévez**<br>X% contribución                                                               | **David Moreno Cerezo**<br>X% contribución                                                     |
+| **Germán García Estévez**<br>70% contribución                                                               | **David Moreno Cerezo**<br>30% contribución                                                     |
 
 ---
